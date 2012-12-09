@@ -177,8 +177,9 @@ sub find_dups {
         my $next = $i + 1;
         print STDERR "\nProcessing $next out of $num_files files\n"
           if $self->verbose;
-        my $progress
-          = Term::ProgressBar->new( { count => $#$files - $next } );
+        my $progress;
+        $progress  = Term::ProgressBar->new( { count => @$files - $next } )
+            if $self->verbose;
         my $count = 1;
         for my $j ( $next .. $#$files ) {
             $progress->update( $count++ ) if $self->verbose;
