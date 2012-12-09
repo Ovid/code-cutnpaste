@@ -419,7 +419,8 @@ __END__
 =head1 DESCRIPTION
 
 A simple, heuristic code duplication checker. Will not work if the code does
-not compile.
+not compile. See the L<find_duplicate_perl> program which is installed with
+it.
 
 =head1 Attributes to constructor
 
