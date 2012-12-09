@@ -12,6 +12,7 @@ use File::Slurp;
 use File::Spec::Functions qw(catfile catdir);
 use Getopt::Long;
 use Moo;
+use Term::ProgressBar;
 use aliased 'Code::CutNPaste::Duplicate';
 use aliased 'Code::CutNPaste::Duplicate::Item';
 
@@ -164,13 +165,14 @@ sub find_dups {
 
     for my $i ( 0 .. $#$files - 1 ) {
         my $next = $i + 1;
-        print STDERR "Processing $next out of $num_files files " if $self->verbose;
+        print STDERR "Processing $next out of $num_files files\n" if $self->verbose;
+        my $progress = Term::ProgressBar->new ({count => $#$files - $next});
+        my $count = 1;
         for my $j ( $next .. $#$files ) {
-            print STDERR '.' if $self->verbose;
+            $progress->update ($count++) if $self->verbose;
             my ( $first, $second ) = @{$files}[ $i, $j ];
             $self->search_for_dups( $first, $second );
         }
-        print STDERR "\n" if $self->verbose;
     }
 }
 

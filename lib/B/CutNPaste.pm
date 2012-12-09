@@ -169,7 +169,19 @@ sub padname {
 sub gv_name {
     my $self = shift;
     my $gv_name = $self->SUPER::gv_name(@_);
-    $gv_name =~ s/\w+/YYYY/g if $self->{__rename_subs};
+
+    # XXX Somes modules break if we s/_/YYYY/ due to the
+    # following:
+    #
+	#    $body = $kid->first->first->sibling; # skip OP_AND and OP_ITER
+	#    if (!is_state $body->first and $body->first->name ne "stub") {
+	#        confess unless $var eq '$_'; # XXX here's where we get an empty confess
+	#        $body = $body->first;
+	#        return $self->deparse($body, 2) . " foreach ($ary)";
+	#    }
+    if ( $gv_name ne '_' ) {
+        $gv_name =~ s/\w+/YYYY/g if $self->{__rename_subs};
+    }
     return $gv_name;
 }
 

@@ -12,22 +12,25 @@ my $builder = Module::Build->new(
         'Test::Most' => '0.25',
     },
     requires => {
-        'Capture::Tiny'    => '0.17',
-        'File::Find::Rule' => '0.33',
-        'File::HomeDir'    => 0,
-        'File::Slurp'      => '9999.19',
-        'Moo'              => 0,
-        'aliased'          => 0,
-        'autodie'          => '2.10',
-        'perl'             => 5.006,
-        'utf8::all'        => '0.004',
+        'Capture::Tiny'     => '0.17',
+        'File::Find::Rule'  => '0.33',
+        'File::HomeDir'     => 0,
+        'File::Slurp'       => '9999.19',
+        'Moo'               => 0,
+        'Term::ProgressBar' => 0,
+        'aliased'           => 0,
+        'autodie'           => '2.10',
+        'perl'              => 5.006,
+        'utf8::all'         => '0.004',
     },
     add_to_cleanup     => ['Code-CutNPaste-*'],
     create_makefile_pl => 'traditional',
 );
 
-if ( $builder->prompt( "Do you wish to install the 'find_duplicate_perl' utility?", "y" )
-    =~ /^[Yy]/ )
+if ($builder->prompt(
+        "Do you wish to install the 'find_duplicate_perl' utility?", "y"
+    ) =~ /^[Yy]/
+  )
 {
     $builder->script_files( ["bin/find_duplicate_perl"] );
 }
