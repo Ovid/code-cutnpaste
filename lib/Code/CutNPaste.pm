@@ -244,18 +244,18 @@ sub search_for_dups {
                 }
             }
             if ( $matches >= $window ) {
-                if ( my $threshhold = $self->threshhold ) {
-                    my $total = 0;
-                    for ( 0 .. $matches - 1 ) {
-                        $total++ if $code1[$_]{code} =~ /w/;
-                    }
-                    if ( $threshhold > $total / $matches ) {
-                        $matches    = 0;
-                    }
-                    for ( 0 .. $matches - 1 ) {
-                        $total++ if $code1[$_]{code} =~ /w/;
-                    }
-                }
+                #if ( my $threshhold = $self->threshhold ) {
+                #    my $total = 0;
+                #    for ( 0 .. $matches - 1 ) {
+                #        $total++ if $code1[$_]{code} =~ /w/;
+                #    }
+                #    if ( $threshhold > $total / $matches ) {
+                #        $matches    = 0;
+                #    }
+                #    for ( 0 .. $matches - 1 ) {
+                #        $total++ if $code1[$_]{code} =~ /w/;
+                #    }
+                #}
             }
             if ( $matches >= $window ) {
                 my $line1 = 0 + $code1[0]{line};
@@ -476,6 +476,8 @@ This code can be very slow. Will print extra information to STDERR if
 verbose is true. This lets you know it hasn't hung.
 
 =head2 C<threshhold>
+
+B<Currently disabled>
 
 A number between 0 and 1. It represents a percentage. If a duplicate section
 of code is found, the percentage number of lines of code containing "word"
