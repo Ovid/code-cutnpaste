@@ -1,0 +1,60 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+use Code::CutNPaste;
+use Getopt::Long;
+
+GetOptions(
+    'window=i'      => \my $window,
+    'exact'         => \my $exact,
+    'dir=s@'        => \my @dir,
+    'ignore=s@'     => \my @ignore,
+    'show_warnings' => \my $show_warnings,
+) or die "Bad options";
+
+my %renamed = (
+    renamed_vars => 1,
+    renamed_subs => 1,
+);
+if ($exact) {
+    %renamed = ();
+}
+
+my $cutnpaste = Code::CutNPaste->new(
+    dirs          => \@dir,
+    ignore        => \@ignore,
+    window        => $window,
+    verbose       => 1,
+    show_warnings => 1,
+    %renamed,
+);
+my $duplicates = $cutnpaste->duplicates;
+
+foreach my $duplicate (@$duplicates) {
+    my ( $left, $right ) = ( $duplicate->left, $duplicate->right );
+    printf <<'END', $left->file, $left->line, $right->file, $right->line;
+
+    Possible duplicate code found
+    Left:  %s line %d
+    Right: %s line %d
+
+END
+    print $duplicate->report;
+}
+
+__END__
+
+=head1 NAME
+
+find_duplicate_perl
+
+=head1 SYNOPSIS
+
+ find_duplicate_perl --dir lib --dir some_other_dir
+
+=head1 OPTIONS
+
+ --window=$window    Set minimum number of lines to look for duplicate code (default 5)
+ --exact             If used, will ignore renamed variables and subs
+ --dir=$dir          Which directories to look for Perl code. May be repeated.  Default 'lib'
