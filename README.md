@@ -32,7 +32,8 @@ Version 0.01
 # DESCRIPTION
 
 A simple, heuristic code duplication checker. Will not work if the code does
-not compile.
+not compile. See the [find_duplicate_perl](http://search.cpan.org/perldoc?find_duplicate_perl) program which is installed with
+it.
 
 # Attributes to constructor
 
@@ -60,6 +61,24 @@ Minumum number of lines to compare between files. Default is 5.
 
 This code can be very slow. Will print extra information to STDERR if
 verbose is true. This lets you know it hasn't hung.
+
+## `threshhold`
+
+A number between 0 and 1. It represents a percentage. If a duplicate section
+of code is found, the percentage number of lines of code containing "word"
+characters must exceed the threshhold. This is done to prevent spurious
+reporting of chunks of code like this:
+
+            };          |         };
+        }               |     }
+        return \@data;  |     return \@attrs;
+    }                   | }
+    sub _confirm {      | sub _execute {
+
+# TODO
+
+- Add Levenstein edit distance
+- Fork off jobs
 
 # AUTHOR
 
@@ -103,9 +122,8 @@ You can also look for information at:
 
 Copyright 2012 Curtis "Ovid" Poe.
 
-This program is free software; you can redistribute it and/or modify it
-under the terms of either: the GNU General Public License as published
-by the Free Software Foundation; or the Artistic License.
+This program is free software; you can redistribute it and/or modify it under
+the terms of either: the GNU General Public License as published by the Free
+Software Foundation; or the Artistic License.
 
 See http://dev.perl.org/licenses/ for more information.
-
