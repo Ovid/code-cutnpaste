@@ -23,7 +23,7 @@ has 'window'        => ( is => 'rwp', default => sub {5} );
 has 'show_warnings' => ( is => 'ro' );
 has 'dirs' => (
     is      => 'ro',
-    default => sub { 'lib' },
+    default => sub {'lib'},
     coerce  => sub {
         my $dirs = shift;
         unless ( ref $dirs ) {
@@ -31,7 +31,7 @@ has 'dirs' => (
         }
         return $dirs;
     },
-    isa     => sub {
+    isa => sub {
         my $dirs = shift;
         for my $dir (@$dirs) {
             unless ( -d $dir ) {
@@ -158,18 +158,20 @@ sub BUILD {
 }
 
 sub find_dups {
-    my $self      = shift;
+    my $self = shift;
     $self->_find_dups_called(1);
     my $files     = $self->files;
     my $num_files = @$files;
 
     for my $i ( 0 .. $#$files - 1 ) {
         my $next = $i + 1;
-        print STDERR "\nProcessing $next out of $num_files files\n" if $self->verbose;
-        my $progress = Term::ProgressBar->new ({count => $#$files - $next});
+        print STDERR "\nProcessing $next out of $num_files files\n"
+          if $self->verbose;
+        my $progress
+          = Term::ProgressBar->new( { count => $#$files - $next } );
         my $count = 1;
         for my $j ( $next .. $#$files ) {
-            $progress->update ($count++) if $self->verbose;
+            $progress->update( $count++ ) if $self->verbose;
             my ( $first, $second ) = @{$files}[ $i, $j ];
             $self->search_for_dups( $first, $second );
         }
@@ -206,7 +208,7 @@ sub search_for_dups {
     }
 
     # brute force is bad!
-  LINE: foreach ( my $i = 0; $i < @$code1 - $window; $i++ ) {
+    LINE: foreach ( my $i = 0; $i < @$code1 - $window; $i++ ) {
         next LINE unless $in_second{ $code1->[$i]{key} };
 
         my @code1 = @{$code1}[ $i .. $#$code1 ];
@@ -214,7 +216,7 @@ sub search_for_dups {
             my @code2   = @{$code2}[ $j .. $#$code2 ];
             my $matches = 0;
             my $longest = 0;
-          WINDOW: foreach my $k ( 0 .. $#code1 ) {
+            WINDOW: foreach my $k ( 0 .. $#code1 ) {
                 if ( $code1[$k]{key} eq $code2[$k]{key} ) {
                     $matches++;
                     my $length1 = length( $code1[$k]{code} );
@@ -275,7 +277,7 @@ sub get_text {
     $filename =~ s/\W/_/g;
     $filename = catfile( $self->cache_dir, $filename );
 
-    my $filename_munged = $filename.".munged";
+    my $filename_munged = $filename . ".munged";
     my ( @contents, @munged );
     if ( -f $filename ) {
         @contents = split /(\n)/ => read_file($filename);
@@ -283,7 +285,8 @@ sub get_text {
     }
     else {
         my $stderr;
-        ( undef, $stderr, @contents ) = capture {qx($^X -Ilib -MO=CutNPaste $file)};
+        ( undef, $stderr, @contents )
+          = capture {qx($^X -Ilib -MO=CutNPaste $file)};
         undef $stderr if $stderr =~ /syntax OK/;
         if ( $stderr and !$self->_could_not_deparse->{$file} ) {
             warn "Problem when parsing $file: $stderr"
@@ -294,11 +297,12 @@ sub get_text {
 
         local $ENV{RENAME_VARS} = $self->renamed_vars || 0;
         local $ENV{RENAME_SUBS} = $self->renamed_subs || 0;
-        ( undef, $stderr, @munged ) = capture {qx($^X -Ilib -MO=CutNPaste $file)};
+        ( undef, $stderr, @munged )
+          = capture {qx($^X -Ilib -MO=CutNPaste $file)};
         undef $stderr if $stderr =~ /syntax OK/;
         if ( $stderr and !$self->_could_not_deparse->{$file} ) {
             warn "\nProblem when parsing $file: $stderr"
-                if $self->show_warnings;
+              if $self->show_warnings;
         }
         write_file( $filename_munged, @munged );
     }
@@ -326,12 +330,11 @@ END
 
     my $line_num = 1;
     foreach my $i ( 0 .. $#$contents ) {
-        my ( $line, $munged_line ) =
-          ( $contents->[$i], $munged->[$i] );
+        my ( $line, $munged_line ) = ( $contents->[$i], $munged->[$i] );
         chomp $line;
         chomp $munged_line;
 
-        if ($line =~ /^#line\s+([0-9]+)/) {
+        if ( $line =~ /^#line\s+([0-9]+)/ ) {
             $line_num = $1;
             next;
         }
@@ -342,14 +345,14 @@ END
         };
         $line_num++;
     }
-    return $self->postfilter(\@contents);
+    return $self->postfilter( \@contents );
 }
 
 sub postfilter {
     my ( $self, $contents ) = @_;
 
     my @contents;
-  INDEX: for ( my $i = 0; $i < @$contents; $i++ ) {
+    INDEX: for ( my $i = 0; $i < @$contents; $i++ ) {
         if ( $contents->[$i]{code} =~ /^(\s*)BEGIN\s*{/ ) {    #    BEGIN {
             my $padding = $1;
             if ( $contents->[ $i + 1 ]{code} =~ /^$padding}/ ) {
@@ -370,11 +373,11 @@ sub prefilter {
     );
     my $skip = 0;
 
-  LINE: for ( my $i = 0; $i < @$contents; $i++ ) {
+    LINE: for ( my $i = 0; $i < @$contents; $i++ ) {
         local $_ = $contents->[$i];
         next if /^\s*(?:use|require)\b/;    # use/require
         next if /^\s*$/;                    # blank lines
-        next if /^#(?!line\s+[0-9]+)/;  # comments which aren't line directives
+        next if /^#(?!line\s+[0-9]+)/; # comments which aren't line directives
 
         # Modules which import things create code like this:
         #
