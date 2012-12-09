@@ -8,8 +8,20 @@ ok my $cutnpaste = Code::CutNPaste->new(
     dirs         => 't/fixtures',
     renamed_vars => 1,
     renamed_subs => 1,
-    verbose      => 1,
 );
 $cutnpaste->find_dups;
-show $cutnpaste->duplicates;
+ok my $duplicates = $cutnpaste->duplicates;
+
+foreach my $duplicate (@$duplicates) {
+    my ( $left, $right )  = ($duplicate->left, $duplicate->right);
+    explain sprintf <<'END', $left->file, $left->line, $right->file, $right->line;
+Possible duplicate code found
+Left:  %s line %d
+Right: %s line %d
+
+END
+    explain $duplicate->report;
+    explain "\n";
+}
+
 done_testing;
