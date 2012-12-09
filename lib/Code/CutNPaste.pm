@@ -21,6 +21,16 @@ has 'renamed_subs'  => ( is => 'ro' );
 has 'verbose'       => ( is => 'ro' );
 has 'window'        => ( is => 'rwp', default => sub {5} );
 has 'show_warnings' => ( is => 'ro' );
+has 'threshhold' => (
+    is      => 'ro',
+    default => sub {.75},
+    isa     => sub {
+        my $threshhold = 0 + shift;
+        if ( $threshhold < 0 or $threshhold > 1 ) {
+            croak("threshhold must be between 0 and 1, inclusive");
+        }
+    },
+);
 has 'dirs' => (
     is      => 'ro',
     default => sub {'lib'},
@@ -233,6 +243,20 @@ sub search_for_dups {
                 }
             }
             if ( $matches >= $window ) {
+                if ( my $threshhold = $self->threshhold ) {
+                    my $total = 0;
+                    for ( 0 .. $matches - 1 ) {
+                        $total++ if $code1[$_]{code} =~ /w/;
+                    }
+                    if ( $threshhold > $total / $matches ) {
+                        $matches    = 0;
+                    }
+                    for ( 0 .. $matches - 1 ) {
+                        $total++ if $code1[$_]{code} =~ /w/;
+                    }
+                }
+            }
+            if ( $matches >= $window ) {
                 my $line1 = 0 + $code1[0]{line};
                 my $line2 = 0 + $code2[0]{line};
 
@@ -265,6 +289,7 @@ sub search_for_dups {
                     ),
                     report => $report,
                 );
+                warn $report;
             }
         }
     }
@@ -449,6 +474,29 @@ Minumum number of lines to compare between files. Default is 5.
 This code can be very slow. Will print extra information to STDERR if
 verbose is true. This lets you know it hasn't hung.
 
+=head2 C<threshhold>
+
+A number between 0 and 1. It represents a percentage. If a duplicate section
+of code is found, the percentage number of lines of code containing "word"
+characters must exceed the threshhold. This is done to prevent spurious
+reporting of chunks of code like this:
+
+         };          |         };
+     }               |     }
+     return \@data;  |     return \@attrs;
+ }                   | }
+ sub _confirm {      | sub _execute {
+
+=head1 TODO
+
+=over 4
+
+=item * Add Levenstein edit distance
+
+=item * Fork off jobs
+
+=back
+
 =head1 AUTHOR
 
 Curtis "Ovid" Poe, C<< <ovid at cpan.org> >>
@@ -495,12 +543,11 @@ L<http://search.cpan.org/dist/Code-CutNPaste/>
 
 Copyright 2012 Curtis "Ovid" Poe.
 
-This program is free software; you can redistribute it and/or modify it
-under the terms of either: the GNU General Public License as published
-by the Free Software Foundation; or the Artistic License.
+This program is free software; you can redistribute it and/or modify it under
+the terms of either: the GNU General Public License as published by the Free
+Software Foundation; or the Artistic License.
 
 See http://dev.perl.org/licenses/ for more information.
-
 
 =cut
 
