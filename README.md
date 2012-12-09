@@ -64,6 +64,8 @@ verbose is true. This lets you know it hasn't hung.
 
 ## `threshhold`
 
+__Currently disabled__
+
 A number between 0 and 1. It represents a percentage. If a duplicate section
 of code is found, the percentage number of lines of code containing "word"
 characters must exceed the threshhold. This is done to prevent spurious
