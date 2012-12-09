@@ -12,11 +12,14 @@ use File::Slurp;
 use File::Spec::Functions qw(catfile catdir);
 use Getopt::Long;
 use Moo;
+use aliased 'Code::CutNPaste::Duplicate';
+use aliased 'Code::CutNPaste::Duplicate::Item';
 
-has 'renamed_vars' => ( is => 'ro' );
-has 'renamed_subs' => ( is => 'ro' );
-has 'verbose'      => ( is => 'ro' );
-has 'window' => ( is => 'ro', default => sub { 5 }, isa => sub { } );
+has 'renamed_vars'  => ( is => 'ro' );
+has 'renamed_subs'  => ( is => 'ro' );
+has 'verbose'       => ( is => 'ro' );
+has 'window'        => ( is => 'rwp', default => sub {5} );
+has 'show_warnings' => ( is => 'ro' );
 has 'dirs' => (
     is      => 'ro',
     default => sub { 'lib' },
@@ -63,14 +66,16 @@ has 'ignore' => (
             $ignore = qr/$ignore/;
         }
         if ( 'ARRAY' eq ref $ignore ) {
+            return unless @$ignore;
             $ignore = join '|' => @$ignore;
+            $ignore = qr/$ignore/;
         }
         return $ignore;
     },
     isa => sub {
         return unless defined $_[0];
         croak("ignore must be a qr/regex/!")
-          unless defined 'Regexp' eq ref $_[0];
+          unless 'Regexp' eq ref $_[0];
     },
 );
 
@@ -82,10 +87,15 @@ has 'cache_dir' => (
     },
 );
 
-has 'duplicates' => (
+has '_duplicates' => (
     is      => 'ro',
     default => sub { [] },
 );
+has '_find_dups_called' => ( is => 'rw' );
+
+# XXX I don't expect this to be normal, but I have found this when I run this
+# code against its own codebase due to "subroutine redefined" warnings
+has '_could_not_deparse' => ( is => 'ro', default => sub { {} } );
 
 =head1 NAME
 
@@ -102,15 +112,34 @@ our $VERSION = '0.01';
 =head1 SYNOPSIS
 
     use Code::CutNPaste;
-    my $foo = Code::CutNPaste->new();
+
+    my $cutnpaste = Code::CutNPaste->new(
+        dirs         => [ 'lib', 'path/to/other/lib' ],
+        renamed_vars => 1,
+        renamed_subs => 1,
+    );
+    my $duplicates = $cutnpaste->duplicates;
+
+    foreach my $duplicate (@$duplicates) {
+        my ( $left, $right ) = ( $duplicate->left, $duplicate->right );
+        printf <<'END', $left->file, $left->line, $right->file, $right->line;
+
+    Possible duplicate code found
+    Left:  %s line %d
+    Right: %s line %d
+
+    END
+        print $duplicate->report;
+    }
 
 =cut
 
 sub BUILD {
     my $self = shift;
-    $DB::single = 1;
 
     my $cache_dir = $self->cache_dir;
+    $self->_set_window(5) unless defined $self->window;
+
     if ( -d $cache_dir ) {
         my @cached = File::Find::Rule->file->in($cache_dir);
         unlink $_ for @cached;
@@ -118,10 +147,9 @@ sub BUILD {
     else {
         mkdir $cache_dir;
     }
-
     for my $dir ( @{ $self->dirs } ) {
-        my @files
-          = File::Find::Rule->file->name( '*.pm', '*.t', '*.pl' )->in($dir);
+        my @files = grep { !/^\./ }
+          File::Find::Rule->file->name( '*.pm', '*.t', '*.pl' )->in($dir);
 
         # XXX dups and subdirs?
         push @{ $self->files } => @files;
@@ -130,27 +158,34 @@ sub BUILD {
 
 sub find_dups {
     my $self      = shift;
+    $self->_find_dups_called(1);
     my $files     = $self->files;
     my $num_files = @$files;
 
     for my $i ( 0 .. $#$files - 1 ) {
         my $next = $i + 1;
-        print "Processing $next out of $num_files files " if $self->verbose;
+        print STDERR "Processing $next out of $num_files files " if $self->verbose;
         for my $j ( $next .. $#$files ) {
-            print '.' if $self->verbose;
+            print STDERR '.' if $self->verbose;
             my ( $first, $second ) = @{$files}[ $i, $j ];
             $self->search_for_dups( $first, $second );
         }
-        print "\n" if $self->verbose;
+        print STDERR "\n" if $self->verbose;
     }
+}
+
+sub duplicates {
+    my $self = shift;
+    $self->find_dups unless $self->_find_dups_called;
+    return $self->_duplicates;
 }
 
 sub search_for_dups {
     my ( $self, $first, $second ) = @_;
     my $window = $self->window;
 
-    my $code1 = $self->get_text($first);
-    my $code2 = $self->get_text($second);
+    my $code1 = $self->get_text($first)  or return;
+    my $code2 = $self->get_text($second) or return;
 
     my %in_second = map { $_->{key} => 1 } @$code2;
 
@@ -213,19 +248,19 @@ sub search_for_dups {
                 if ( $ignore and $report =~ /$ignore/ ) {
                     next LINE;
                 }
-                push @{ $self->duplicates } => {
-                    left => {
+                push @{ $self->_duplicates } => Duplicate->new(
+                    left => Item->new(
                         file => $first,
                         line => $line1,
                         code => $left,
-                    },
-                    right => {
+                    ),
+                    right => Item->new(
                         file => $second,
                         line => $line2,
                         code => $right,
-                    },
+                    ),
                     report => $report,
-                };
+                );
             }
         }
     }
@@ -233,31 +268,58 @@ sub search_for_dups {
 
 sub get_text {
     my ( $self, $file ) = @_;
+
     my $filename = $file;
     $filename =~ s/\W/_/g;
     $filename = catfile( $self->cache_dir, $filename );
-    my $filename_vars = $filename.".munged";
+
+    my $filename_munged = $filename.".munged";
     my ( @contents, @munged );
     if ( -f $filename ) {
         @contents = split /(\n)/ => read_file($filename);
-        @munged   = split /(\n)/ => read_file($filename_vars);
+        @munged   = split /(\n)/ => read_file($filename_munged);
     }
     else {
-        ( undef, undef, @contents ) = capture {qx($^X -Ilib -MO=CutNPaste $file)};
+        my $stderr;
+        ( undef, $stderr, @contents ) = capture {qx($^X -Ilib -MO=CutNPaste $file)};
+        undef $stderr if $stderr =~ /syntax OK/;
+        if ( $stderr and !$self->_could_not_deparse->{$file} ) {
+            warn "Problem when parsing $file: $stderr"
+              if $self->show_warnings;
+        }
+        undef $stderr;
         write_file( $filename, @contents );
 
         local $ENV{RENAME_VARS} = $self->renamed_vars || 0;
         local $ENV{RENAME_SUBS} = $self->renamed_subs || 0;
-        ( undef, undef, @munged ) = capture {qx($^X -Ilib -MO=CutNPaste $file)};
-        write_file( $filename_vars, @munged );
+        ( undef, $stderr, @munged ) = capture {qx($^X -Ilib -MO=CutNPaste $file)};
+        undef $stderr if $stderr =~ /syntax OK/;
+        if ( $stderr and !$self->_could_not_deparse->{$file} ) {
+            warn "\nProblem when parsing $file: $stderr"
+                if $self->show_warnings;
+        }
+        write_file( $filename_munged, @munged );
     }
-    return $self->add_line_numbers( \@contents, \@munged );
+    return $self->add_line_numbers( $file, \@contents, \@munged );
 }
 
 sub add_line_numbers {
     my $self = shift;
+    my $file = shift;
+    return if $self->_could_not_deparse->{$file};
     my $contents = $self->prefilter(shift);
     my $munged   = $self->prefilter(shift);
+
+    if ( !@$contents or !@$munged ) {
+        warn <<"END";
+
+There was a problem parsing $file. It will be skipped.
+Try rerunning with show_warnings => 1.
+
+END
+        $self->_could_not_deparse->{$file} = 1;
+        return;
+    }
     my @contents;
 
     my $line_num = 1;
@@ -346,15 +408,52 @@ sub make_key {
     return $_;
 }
 
+1;
+__END__
+
+=head1 DESCRIPTION
+
+A simple, heuristic code duplication checker. Will not work if the code does
+not compile.
+
+=head1 Attributes to constructor
+
+=head2 C<dirs>
+
+An array ref of dirs to search for Perl code. Defaults to 'lib'.
+
+=head2 C<files>
+
+An array ref of files to be examined (will be added to dirs, above).
+
+=head2 C<renamed_vars>
+
+Will report duplicates even if variables are renamed.
+
+=head2 C<renamed_subs>
+
+Will report duplicates even if subroutines are renamed.
+
+=head2 C<window>
+
+Minumum number of lines to compare between files. Default is 5.
+
+=head2 C<verbose>
+
+This code can be very slow. Will print extra information to STDERR if
+verbose is true. This lets you know it hasn't hung.
+
 =head1 AUTHOR
 
 Curtis "Ovid" Poe, C<< <ovid at cpan.org> >>
 
 =head1 BUGS
 
-Please report any bugs or feature requests to C<bug-code-cutnpaste at rt.cpan.org>, or through
-the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=Code-CutNPaste>.  I will be notified, and then you'll
-automatically be notified of progress on your bug as I make changes.
+Please report any bugs or feature requests to C<bug-code-cutnpaste at
+rt.cpan.org>, or through the web interface at
+L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=Code-CutNPaste>.  I will be
+notified, and then you'll automatically be notified of progress on your bug as
+I make changes.
 
 =head1 SUPPORT
 

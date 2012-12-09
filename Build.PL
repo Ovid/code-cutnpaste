@@ -17,6 +17,7 @@ my $builder = Module::Build->new(
         'File::HomeDir'    => 0,
         'File::Slurp'      => '9999.19',
         'Moo'              => 0,
+        'aliased'          => 0,
         'autodie'          => '2.10',
         'perl'             => 5.006,
         'utf8::all'        => '0.004',
@@ -24,5 +25,11 @@ my $builder = Module::Build->new(
     add_to_cleanup     => ['Code-CutNPaste-*'],
     create_makefile_pl => 'traditional',
 );
+
+if ( $builder->prompt( "Do you wish to install the 'find_duplicate_perl' utility?", "y" )
+    =~ /^[Yy]/ )
+{
+    $builder->script_files( ["bin/find_duplicate_perl"] );
+}
 
 $builder->create_build_script();
