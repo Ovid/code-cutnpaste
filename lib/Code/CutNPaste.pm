@@ -1,12 +1,95 @@
 package Code::CutNPaste;
 
 use 5.006;
-use strict;
-use warnings;
+
+use autodie;
+use utf8::all;
+use Capture::Tiny qw(capture);
+use Carp;
+use File::Find::Rule;
+use File::HomeDir;
+use File::Slurp;
+use File::Spec::Functions qw(catfile catdir);
+use Getopt::Long;
+use Moo;
+
+has 'renamed_vars' => ( is => 'ro' );
+has 'renamed_subs' => ( is => 'ro' );
+has 'verbose'      => ( is => 'ro' );
+has 'window' => ( is => 'ro', default => sub { 5 }, isa => sub { } );
+has 'dirs' => (
+    is      => 'ro',
+    default => sub { 'lib' },
+    coerce  => sub {
+        my $dirs = shift;
+        unless ( ref $dirs ) {
+            $dirs = [$dirs];
+        }
+        return $dirs;
+    },
+    isa     => sub {
+        my $dirs = shift;
+        for my $dir (@$dirs) {
+            unless ( -d $dir ) {
+                croak("Cannot find directory '$dir'");
+            }
+        }
+    },
+);
+
+has 'files' => (
+    is      => 'ro',
+    default => sub { [] },
+    isa     => sub {
+        my $files = shift;
+        unless ( 'ARRAY' eq ref $files ) {
+            croak("Argument to files must be an array reference of files");
+        }
+        for my $file (@$files) {
+            unless ( -f $file && -r _ ) {
+                croak("File '$file' does not exist or cannot be read");
+            }
+        }
+    },
+);
+
+has 'ignore' => (
+    is     => 'ro',
+    coerce => sub {
+        my $ignore = shift;
+        return unless defined $ignore;
+        return $ignore if ref $ignore eq 'Regexp';
+        if ( !ref $ignore ) {
+            $ignore = qr/$ignore/;
+        }
+        if ( 'ARRAY' eq ref $ignore ) {
+            $ignore = join '|' => @$ignore;
+        }
+        return $ignore;
+    },
+    isa => sub {
+        return unless defined $_[0];
+        croak("ignore must be a qr/regex/!")
+          unless defined 'Regexp' eq ref $_[0];
+    },
+);
+
+has 'cache_dir' => (
+    is      => 'ro',
+    default => sub {
+        my $homedir = File::HomeDir->my_home;
+        return catdir( $homedir, '.cutnpaste' );
+    },
+);
+
+has 'duplicates' => (
+    is      => 'ro',
+    default => sub { [] },
+);
 
 =head1 NAME
 
-Code::CutNPaste - The great new Code::CutNPaste!
+Code::CutNPaste - Find Duplicate Perl Code
 
 =head1 VERSION
 
@@ -16,37 +99,251 @@ Version 0.01
 
 our $VERSION = '0.01';
 
-
 =head1 SYNOPSIS
 
-Quick summary of what the module does.
-
-Perhaps a little code snippet.
-
     use Code::CutNPaste;
-
     my $foo = Code::CutNPaste->new();
-    ...
-
-=head1 EXPORT
-
-A list of functions that can be exported.  You can delete this section
-if you don't export anything, such as for a purely object-oriented module.
-
-=head1 SUBROUTINES/METHODS
-
-=head2 function1
 
 =cut
 
-sub function1 {
+sub BUILD {
+    my $self = shift;
+    $DB::single = 1;
+
+    my $cache_dir = $self->cache_dir;
+    if ( -d $cache_dir ) {
+        my @cached = File::Find::Rule->file->in($cache_dir);
+        unlink $_ for @cached;
+    }
+    else {
+        mkdir $cache_dir;
+    }
+
+    for my $dir ( @{ $self->dirs } ) {
+        my @files
+          = File::Find::Rule->file->name( '*.pm', '*.t', '*.pl' )->in($dir);
+
+        # XXX dups and subdirs?
+        push @{ $self->files } => @files;
+    }
 }
 
-=head2 function2
+sub find_dups {
+    my $self      = shift;
+    my $files     = $self->files;
+    my $num_files = @$files;
 
-=cut
+    for my $i ( 0 .. $#$files - 1 ) {
+        my $next = $i + 1;
+        print "Processing $next out of $num_files files " if $self->verbose;
+        for my $j ( $next .. $#$files ) {
+            print '.' if $self->verbose;
+            my ( $first, $second ) = @{$files}[ $i, $j ];
+            $self->search_for_dups( $first, $second );
+        }
+        print "\n" if $self->verbose;
+    }
+}
 
-sub function2 {
+sub search_for_dups {
+    my ( $self, $first, $second ) = @_;
+    my $window = $self->window;
+
+    my $code1 = $self->get_text($first);
+    my $code2 = $self->get_text($second);
+
+    my %in_second = map { $_->{key} => 1 } @$code2;
+
+    my $matches_found = 0;
+    my $last_found    = 0;
+    foreach my $i ( 0 .. $#$code1 ) {
+        if ( $in_second{ $code1->[$i]{key} } ) {
+            if ( $i == $last_found + 1 ) {
+                $matches_found++;
+            }
+            $last_found = $i;
+        }
+    }
+    if ( $matches_found < $window ) {
+        return;
+    }
+
+    # brute force is bad!
+  LINE: foreach ( my $i = 0; $i < @$code1 - $window; $i++ ) {
+        next LINE unless $in_second{ $code1->[$i]{key} };
+
+        my @code1 = @{$code1}[ $i .. $#$code1 ];
+        foreach my $j ( 0 .. $#$code2 - $window ) {
+            my @code2   = @{$code2}[ $j .. $#$code2 ];
+            my $matches = 0;
+            my $longest = 0;
+          WINDOW: foreach my $k ( 0 .. $#code1 ) {
+                if ( $code1[$k]{key} eq $code2[$k]{key} ) {
+                    $matches++;
+                    my $length1 = length( $code1[$k]{code} );
+                    if ( $length1 > $longest ) {
+                        $longest = $length1;
+                    }
+                    my $length2 = length( $code2[$k]{code} );
+                    if ( $length2 > $longest ) {
+                        $longest = $length2;
+                    }
+                }
+                else {
+                    last WINDOW;
+                }
+            }
+            if ( $matches >= $window ) {
+                my $line1 = 0 + $code1[0]{line};
+                my $line2 = 0 + $code2[0]{line};
+
+                my ( $left, $right, $report ) = ( '', '', '' );
+                for ( 0 .. $matches - 1 ) {
+                    $left  .= $code1[$_]{code} . "\n";
+                    $right .= $code2[$_]{code} . "\n";
+                    my ( $line1, $line2 )
+                      = map { chomp; $_ }
+                      ( $code1[$_]{code}, $code2[$_]{code} );
+                    $report
+                      .= $line1 . ( ' ' x ( $longest - length($line1) ) );
+                    $report .= " | $line2\n";
+                }
+                $i += $matches;
+                my $ignore = $self->ignore;
+                if ( $ignore and $report =~ /$ignore/ ) {
+                    next LINE;
+                }
+                push @{ $self->duplicates } => {
+                    left => {
+                        file => $first,
+                        line => $line1,
+                        code => $left,
+                    },
+                    right => {
+                        file => $second,
+                        line => $line2,
+                        code => $right,
+                    },
+                    report => $report,
+                };
+            }
+        }
+    }
+}
+
+sub get_text {
+    my ( $self, $file ) = @_;
+    my $filename = $file;
+    $filename =~ s/\W/_/g;
+    $filename = catfile( $self->cache_dir, $filename );
+    my $filename_vars = $filename.".munged";
+    my ( @contents, @munged );
+    if ( -f $filename ) {
+        @contents = split /(\n)/ => read_file($filename);
+        @munged   = split /(\n)/ => read_file($filename_vars);
+    }
+    else {
+        ( undef, undef, @contents ) = capture {qx($^X -Ilib -MO=CutNPaste $file)};
+        write_file( $filename, @contents );
+
+        local $ENV{RENAME_VARS} = $self->renamed_vars || 0;
+        local $ENV{RENAME_SUBS} = $self->renamed_subs || 0;
+        ( undef, undef, @munged ) = capture {qx($^X -Ilib -MO=CutNPaste $file)};
+        write_file( $filename_vars, @munged );
+    }
+    return $self->add_line_numbers( \@contents, \@munged );
+}
+
+sub add_line_numbers {
+    my $self = shift;
+    my $contents = $self->prefilter(shift);
+    my $munged   = $self->prefilter(shift);
+    my @contents;
+
+    my $line_num = 1;
+    foreach my $i ( 0 .. $#$contents ) {
+        my ( $line, $munged_line ) =
+          ( $contents->[$i], $munged->[$i] );
+        chomp $line;
+        chomp $munged_line;
+
+        if ($line =~ /^#line\s+([0-9]+)/) {
+            $line_num = $1;
+            next;
+        }
+        push @contents => {
+            line => $line_num,
+            key  => $self->make_key($munged_line),
+            code => $line,
+        };
+        $line_num++;
+    }
+    return $self->postfilter(\@contents);
+}
+
+sub postfilter {
+    my ( $self, $contents ) = @_;
+
+    my @contents;
+  INDEX: for ( my $i = 0; $i < @$contents; $i++ ) {
+        if ( $contents->[$i]{code} =~ /^(\s*)BEGIN\s*{/ ) {    #    BEGIN {
+            my $padding = $1;
+            if ( $contents->[ $i + 1 ]{code} =~ /^$padding}/ ) {
+                $i++;
+                next INDEX;
+            }
+        }
+        push @contents => $contents->[$i];
+    }
+    return \@contents;
+}
+
+sub prefilter {
+    my ( $self, $contents ) = @_;
+    my @contents;
+    my %skip = (
+        sub_begin => 0,
+    );
+    my $skip = 0;
+
+  LINE: for ( my $i = 0; $i < @$contents; $i++ ) {
+        local $_ = $contents->[$i];
+        next if /^\s*(?:use|require)\b/;    # use/require
+        next if /^\s*$/;                    # blank lines
+        next if /^#(?!line\s+[0-9]+)/;  # comments which aren't line directives
+
+        # Modules which import things create code like this:
+        #
+        #     sub BEGIN {
+        #         require strict;
+        #         do {
+        #             'strict'->import('refs')
+        #         };
+        #     }
+        #
+        # $skip{sub_begin} filters this out
+
+        if (/^sub BEGIN {/) {
+            $skip{sub_begin} = 1;
+            $skip++;
+        }
+        elsif ( $skip{sub_begin} and /^}/ ) {
+            $skip{sub_begin} = 0;
+            $skip--;
+            next;
+        }
+
+        push @contents => $_ unless $skip;
+    }
+    return \@contents;
+}
+
+sub make_key {
+    my $self = shift;
+    local $_ = shift;
+    chomp;
+    s/\s//g;
+    return $_;
 }
 
 =head1 AUTHOR
@@ -59,15 +356,11 @@ Please report any bugs or feature requests to C<bug-code-cutnpaste at rt.cpan.or
 the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=Code-CutNPaste>.  I will be notified, and then you'll
 automatically be notified of progress on your bug as I make changes.
 
-
-
-
 =head1 SUPPORT
 
 You can find documentation for this module with the perldoc command.
 
     perldoc Code::CutNPaste
-
 
 You can also look for information at:
 
@@ -91,9 +384,7 @@ L<http://search.cpan.org/dist/Code-CutNPaste/>
 
 =back
 
-
 =head1 ACKNOWLEDGEMENTS
-
 
 =head1 LICENSE AND COPYRIGHT
 
@@ -108,4 +399,4 @@ See http://dev.perl.org/licenses/ for more information.
 
 =cut
 
-1; # End of Code::CutNPaste
+1;    # End of Code::CutNPaste
