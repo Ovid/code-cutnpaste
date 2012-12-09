@@ -179,7 +179,10 @@ sub gv_name {
 	#        $body = $body->first;
 	#        return $self->deparse($body, 2) . " foreach ($ary)";
 	#    }
-    if ( $gv_name ne '_' ) {
+    # 
+    # Also, it's probably only the BEGIN block, but if you rename that, your
+    # code parses differently.
+    if ( $gv_name ne '_' and $gv_name !~ /BEGIN|CHECK|INIT|END/ ) {
         $gv_name =~ s/\w+/YYYY/g if $self->{__rename_subs};
     }
     return $gv_name;

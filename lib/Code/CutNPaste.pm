@@ -165,7 +165,7 @@ sub find_dups {
 
     for my $i ( 0 .. $#$files - 1 ) {
         my $next = $i + 1;
-        print STDERR "Processing $next out of $num_files files\n" if $self->verbose;
+        print STDERR "\nProcessing $next out of $num_files files\n" if $self->verbose;
         my $progress = Term::ProgressBar->new ({count => $#$files - $next});
         my $count = 1;
         for my $j ( $next .. $#$files ) {
@@ -312,7 +312,7 @@ sub add_line_numbers {
     my $contents = $self->prefilter(shift);
     my $munged   = $self->prefilter(shift);
 
-    if ( !@$contents or !@$munged ) {
+    if ( @$contents != @$munged ) {
         warn <<"END";
 
 There was a problem parsing $file. It will be skipped.
