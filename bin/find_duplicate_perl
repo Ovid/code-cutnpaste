@@ -8,10 +8,25 @@ use Getopt::Long;
 GetOptions(
     'window=i'      => \my $window,
     'exact'         => \my $exact,
-    'dir=s@'        => \my @dir,
     'ignore=s@'     => \my @ignore,
     'show_warnings' => \my $show_warnings,
 ) or die "Bad options";
+
+my ( @dirs, @files );
+foreach my $arg (@ARGV) {
+    if ( -d $arg ) {
+        push @dirs => $arg;
+    }
+    elsif (-f $arg) {
+        push @files => $arg;
+    }
+    else {
+        warn "Don't know what to do with '$arg'. Ignoring";
+    }
+}
+if ( !@dirs and !@files ) {
+    @dirs = 'lib';
+}
 
 my %renamed = (
     renamed_vars => 1,
@@ -22,7 +37,8 @@ if ($exact) {
 }
 
 my $cutnpaste = Code::CutNPaste->new(
-    dirs          => \@dir,
+    dirs          => \@dirs,
+    files         => \@files,
     ignore        => \@ignore,
     window        => $window,
     verbose       => 1,
@@ -34,13 +50,16 @@ my $duplicates = $cutnpaste->duplicates;
 foreach my $duplicate (@$duplicates) {
     my ( $left, $right ) = ( $duplicate->left, $duplicate->right );
     printf <<'END', $left->file, $left->line, $right->file, $right->line;
+___________________________________________________________________________
 
-    Possible duplicate code found
-    Left:  %s line %d
-    Right: %s line %d
+Possible duplicate code found
+Left:  %s line %d
+Right: %s line %d
 
 END
-    print $duplicate->report;
+    my $report = "    ".$duplicate->report;
+    $report =~ s/\n/\n    /g;
+    print "$report\n";
 }
 
 __END__
@@ -51,10 +70,16 @@ find_duplicate_perl
 
 =head1 SYNOPSIS
 
- find_duplicate_perl --dir lib --dir some_other_dir
+ find_duplicate_perl lib some_other_dir some_file.pl
 
 =head1 OPTIONS
 
  --window=$window    Set minimum number of lines to look for duplicate code (default 5)
  --exact             If used, will ignore renamed variables and subs
- --dir=$dir          Which directories to look for Perl code. May be repeated.  Default 'lib'
+ --ignore            A regex of duplicate code snippets to ignore (may be repeated)
+ --show_warnings     If for some reason a file cannot load, use this to show the reason why
+
+=head1 DESCRIPTION
+
+Takes a list and directories as arguments and searches for duplicate Perl code
+in all files it finds there.
