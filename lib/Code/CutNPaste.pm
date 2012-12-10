@@ -290,7 +290,6 @@ sub search_for_dups {
                     ),
                     report => $report,
                 );
-                warn $report;
             }
         }
     }
