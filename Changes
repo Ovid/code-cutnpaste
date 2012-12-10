@@ -2,6 +2,8 @@ Revision history for Code-CutNPaste
 
 0.02    December 10, 2012
         - Add 'jobs' switch to allow parallel jobs to run
+        - Fix bug where we sometimes try to read the munged file before it's
+          written (the joys of parallel code!)
         - Cleaned up report format in find_duplicate_perl binary
 
 0.01    December 9, 2012

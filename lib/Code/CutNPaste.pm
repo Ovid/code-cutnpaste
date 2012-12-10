@@ -363,7 +363,17 @@ sub get_text {
     my ( @contents, @munged );
     if ( -f $filename ) {
         @contents = split /(\n)/ => read_file($filename);
-        @munged   = split /(\n)/ => read_file($filename_munged);
+
+        # sometimes another fork has already written the $filename, but not
+        # yet written the $filename_munged, so we will wait up to three
+        # seconds for it before trying to read it.
+        # A better ordering of the @pairs might help?
+        my $retry = 1;
+        while ( !-f $filename_munged ) {
+            sleep 1;
+            last if $retry++ > 3;
+        }
+        @munged = split /(\n)/ => read_file($filename_munged);
     }
     else {
         my $stderr;
