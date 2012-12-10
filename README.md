@@ -88,6 +88,9 @@ and thus will not be reported.
 
 - Add Levenstein edit distance
 - Fork off jobs
+- Mask off strings.
+
+It's amazing how many strings I'm finding which hide duplicates.
 
 # AUTHOR
 

@@ -559,6 +559,10 @@ and thus will not be reported.
 
 =item * Fork off jobs
 
+=item * Mask off strings.
+
+It's amazing how many strings I'm finding which hide duplicates.
+
 =back
 
 =head1 AUTHOR
