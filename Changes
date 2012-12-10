@@ -1,5 +1,8 @@
 Revision history for Code-CutNPaste
 
-0.01    Date/time
-        First version, released on an unsuspecting world.
+0.02    December 10, 2012
+        - Add 'jobs' switch to allow parallel jobs to run
+
+0.01    December 9, 2012
+        Find duplicate code
 

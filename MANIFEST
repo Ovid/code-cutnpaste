@@ -15,3 +15,6 @@ t/fixtures/MyBaseRenamed.pm
 xt/manifest.t
 xt/pod-coverage.t
 xt/pod.t
+Makefile.PL
+META.yml
+META.json
