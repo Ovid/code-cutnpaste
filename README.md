@@ -4,7 +4,7 @@ Code::CutNPaste - Find Duplicate Perl Code
 
 # VERSION
 
-Version 0.01
+Version 0.02
 
 # SYNOPSIS
 
@@ -61,6 +61,12 @@ Minumum number of lines to compare between files. Default is 5.
 
 This code can be very slow. Will print extra information to STDERR if
 verbose is true. This lets you know it hasn't hung.
+
+## `jobs`
+
+Takes an integer. Defaults to 1. This is the number of jobs we'll try to run
+to gather this data. On multi-core machines, you can easily use this to max
+our your CPU and speed up duplicate code detection.
 
 ## `threshhold`
 
