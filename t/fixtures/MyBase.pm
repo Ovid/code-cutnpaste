@@ -1,3 +1,12 @@
+THRESHHOLD_TEST: for my $i ( 0 .. 1 ) {
+    for my $j ( 0 .. 1 ) {
+        for my $k ( 0 .. 1 ) {
+            if ($k) {
+                my $null = $i + $j + $k;
+            }
+        }
+    }
+}
 sub add_line_numbers {
     my $contents      = prefilter(shift);
     my $with_varnames = prefilter(shift);

@@ -5,6 +5,7 @@ Revision history for Code-CutNPaste
         - Fix bug where we sometimes try to read the munged file before it's
           written (the joys of parallel code!)
         - Cleaned up report format in find_duplicate_perl binary
+        - Make the thresshold work
 
 0.01    December 9, 2012
         Find duplicate code

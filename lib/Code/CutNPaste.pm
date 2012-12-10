@@ -26,6 +26,7 @@ has 'show_warnings' => ( is => 'ro' );
 has 'threshhold' => (
     is      => 'ro',
     default => sub {.75},
+    coerce  => sub { return .75 unless defined $_[0] },
     isa     => sub {
         my $threshhold = 0 + shift;
         if ( $threshhold < 0 or $threshhold > 1 ) {
@@ -161,7 +162,8 @@ sub BUILD {
         mkdir $cache_dir;
     }
     for my $dir ( @{ $self->dirs } ) {
-        my @files = grep { !/^\./ }
+        my @files =
+          grep { !/^\./ }
           File::Find::Rule->file->name( '*.pm', '*.t', '*.pl' )->in($dir);
 
         # XXX dups and subdirs?
@@ -187,13 +189,15 @@ sub find_dups {
 
     my $fork = Parallel::ForkManager->new( $jobs || 1 );
 
-    $fork->run_on_finish( sub {
-        my $duplicates = pop @_;
-        push @{ $self->_duplicates } => @$duplicates;
-    });
+    $fork->run_on_finish(
+        sub {
+            my $duplicates = pop @_;
+            push @{ $self->_duplicates } => @$duplicates;
+        }
+    );
     my @left_right;
     if ( $jobs > 1 ) {
-        my $files_per_job = int($num_files/$jobs);
+        my $files_per_job = int( $num_files / $jobs );
         for ( 1 .. $jobs ) {
             if ( $_ < $jobs ) {
                 push @left_right => splice @pairs, 0, $files_per_job;
@@ -215,10 +219,10 @@ sub find_dups {
     ) if $self->verbose;
     my $count = 1;
     foreach my $next_files (@left_right) {
-        $progress->update($count++) if $self->verbose;
+        $progress->update( $count++ ) if $self->verbose;
         my $pid = $fork->start and next;
 
-        my $duplicates_found = $self->search_for_dups( @$next_files );
+        my $duplicates_found = $self->search_for_dups(@$next_files);
 
         $fork->finish( 0, $duplicates_found );
     }
@@ -257,7 +261,7 @@ sub search_for_dups {
     # brute force is bad!
 
     my @duplicates_found;
-    LINE: foreach ( my $i = 0; $i < @$code1 - $window; $i++ ) {
+  LINE: foreach ( my $i = 0; $i < @$code1 - $window; $i++ ) {
         next LINE unless $in_second{ $code1->[$i]{key} };
 
         my @code1 = @{$code1}[ $i .. $#$code1 ];
@@ -265,7 +269,7 @@ sub search_for_dups {
             my @code2   = @{$code2}[ $j .. $#$code2 ];
             my $matches = 0;
             my $longest = 0;
-            WINDOW: foreach my $k ( 0 .. $#code1 ) {
+          WINDOW: foreach my $k ( 0 .. $#code1 ) {
                 if ( $code1[$k]{key} eq $code2[$k]{key} ) {
                     $matches++;
                     my $length1 = length( $code1[$k]{code} );
@@ -281,36 +285,38 @@ sub search_for_dups {
                     last WINDOW;
                 }
             }
+
+            # if too many lines don't meet our threshold level, don't report
+            # this block of code
             if ( $matches >= $window ) {
-                #if ( my $threshhold = $self->threshhold ) {
-                #    my $total = 0;
-                #    for ( 0 .. $matches - 1 ) {
-                #        $total++ if $code1[$_]{code} =~ /w/;
-                #    }
-                #    if ( $threshhold > $total / $matches ) {
-                #        $matches    = 0;
-                #    }
-                #    for ( 0 .. $matches - 1 ) {
-                #        $total++ if $code1[$_]{code} =~ /w/;
-                #    }
-                #}
+                if ( my $threshhold = $self->threshhold ) {
+                    my $total = 0;
+                    for ( 0 .. $matches - 1 ) {
+                        $total++ if $code1[$_]{code} =~ /\w/;
+                    }
+                    if ( $threshhold > $total / $matches ) {
+                        $matches = 0;
+                    }
+                }
             }
             if ( $matches >= $window ) {
-                my $line1 = 0 + $code1[0]{line};
-                my $line2 = 0 + $code2[0]{line};
+                my $line1 = $code1[0]{line};
+                my $line2 = $code2[0]{line};
 
                 my ( $left, $right, $report ) = ( '', '', '' );
                 for ( 0 .. $matches - 1 ) {
                     $left  .= $code1[$_]{code} . "\n";
                     $right .= $code2[$_]{code} . "\n";
-                    my ( $line1, $line2 )
-                      = map { chomp; $_ }
-                      ( $code1[$_]{code}, $code2[$_]{code} );
+                    my ( $line1, $line2 ) =
+                      map { chomp; $_ } ( $code1[$_]{code}, $code2[$_]{code} );
                     $report
                       .= $line1 . ( ' ' x ( $longest - length($line1) ) );
                     $report .= " | $line2\n";
                 }
+
+                # Next duplicate report should start after this chunk of code
                 $i += $matches;
+
                 my $ignore = $self->ignore;
                 if ( $ignore and $report =~ /$ignore/ ) {
                     next LINE;
@@ -359,8 +365,8 @@ sub get_text {
     }
     else {
         my $stderr;
-        ( undef, $stderr, @contents )
-          = capture {qx($^X -Ilib -MO=CutNPaste $file)};
+        ( undef, $stderr, @contents ) =
+          capture {qx($^X -Ilib -MO=CutNPaste $file)};
         undef $stderr if $stderr =~ /syntax OK/;
         if ( $stderr and !$self->_could_not_deparse->{$file} ) {
             warn "Problem when parsing $file: $stderr"
@@ -371,8 +377,8 @@ sub get_text {
 
         local $ENV{RENAME_VARS} = $self->renamed_vars || 0;
         local $ENV{RENAME_SUBS} = $self->renamed_subs || 0;
-        ( undef, $stderr, @munged )
-          = capture {qx($^X -Ilib -MO=CutNPaste $file)};
+        ( undef, $stderr, @munged ) =
+          capture {qx($^X -Ilib -MO=CutNPaste $file)};
         undef $stderr if $stderr =~ /syntax OK/;
         if ( $stderr and !$self->_could_not_deparse->{$file} ) {
             warn "\nProblem when parsing $file: $stderr"
@@ -426,7 +432,7 @@ sub postfilter {
     my ( $self, $contents ) = @_;
 
     my @contents;
-    INDEX: for ( my $i = 0; $i < @$contents; $i++ ) {
+  INDEX: for ( my $i = 0; $i < @$contents; $i++ ) {
         if ( $contents->[$i]{code} =~ /^(\s*)BEGIN\s*{/ ) {    #    BEGIN {
             my $padding = $1;
             if ( $contents->[ $i + 1 ]{code} =~ /^$padding}/ ) {
@@ -447,11 +453,11 @@ sub prefilter {
     );
     my $skip = 0;
 
-    LINE: for ( my $i = 0; $i < @$contents; $i++ ) {
+  LINE: for ( my $i = 0; $i < @$contents; $i++ ) {
         local $_ = $contents->[$i];
         next if /^\s*(?:use|require)\b/;    # use/require
         next if /^\s*$/;                    # blank lines
-        next if /^#(?!line\s+[0-9]+)/; # comments which aren't line directives
+        next if /^#(?!line\s+[0-9]+)/;  # comments which aren't line directives
 
         # Modules which import things create code like this:
         #
@@ -531,8 +537,6 @@ our your CPU and speed up duplicate code detection.
 
 =head2 C<threshhold>
 
-B<Currently disabled>
-
 A number between 0 and 1. It represents a percentage. If a duplicate section
 of code is found, the percentage number of lines of code containing "word"
 characters must exceed the threshhold. This is done to prevent spurious
@@ -543,6 +547,9 @@ reporting of chunks of code like this:
      return \@data;  |     return \@attrs;
  }                   | }
  sub _confirm {      | sub _execute {
+
+The above code has on 40% of its lines containing word (C<qr/\w/>) characters,
+and thus will not be reported.
 
 =head1 TODO
 

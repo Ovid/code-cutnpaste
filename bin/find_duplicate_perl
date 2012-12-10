@@ -11,6 +11,7 @@ GetOptions(
     'ignore=s@'     => \my @ignore,
     'show_warnings' => \my $show_warnings,
     'jobs=i'        => \( my $jobs = 1 ),
+    'threshhold=s'  => \my $threshhold,
 ) or die "Bad options";
 
 my ( @dirs, @files );
@@ -45,6 +46,7 @@ my $cutnpaste = Code::CutNPaste->new(
     verbose       => 1,
     show_warnings => $show_warnings,
     jobs          => $jobs,
+    threshhold    => $threshhold,
     %renamed,
 );
 my $duplicates = $cutnpaste->duplicates;

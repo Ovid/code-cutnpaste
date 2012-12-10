@@ -1,3 +1,15 @@
+THRESHHOLD_TEST: for my $i ( 0 .. 1 ) {
+    for my $j ( 0 .. 1 ) {
+        for my $k ( 0 .. 1 ) {
+            next unless $j;
+            if ($k) {
+                my $null = $i + $j + $k;
+            }
+        }
+    }
+}
+sub bar {7}
+
 sub add_line_numbers {
     my $contents      = prefilter(shift);
     my $with_varnames = prefilter(shift);
@@ -9,7 +21,7 @@ sub add_line_numbers {
           ( $contents->[$i], $with_varnames->[$i] );
         chomp $line_with_vars;
 
-        if ($line =~ /^#line\s+([0-9]+)/) {
+        if ( $line =~ /^#line\s+([0-9]+)/ ) {
             $line_num = $1;
             next;
         }
@@ -20,7 +32,7 @@ sub add_line_numbers {
         };
         $line_num++;
     }
-    return postfilter(\@contents);
+    return postfilter( \@contents );
 }
 
 1;
