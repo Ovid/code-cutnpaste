@@ -70,8 +70,6 @@ our your CPU and speed up duplicate code detection.
 
 ## `threshhold`
 
-__Currently disabled__
-
 A number between 0 and 1. It represents a percentage. If a duplicate section
 of code is found, the percentage number of lines of code containing "word"
 characters must exceed the threshhold. This is done to prevent spurious
@@ -82,6 +80,9 @@ reporting of chunks of code like this:
         return \@data;  |     return \@attrs;
     }                   | }
     sub _confirm {      | sub _execute {
+
+The above code has on 40% of its lines containing word (`qr/\w/`) characters,
+and thus will not be reported.
 
 # TODO
 
