@@ -87,4 +87,6 @@ find_duplicate_perl
 =head1 DESCRIPTION
 
 Takes a list and directories as arguments and searches for duplicate Perl code
-in all files it finds there.
+in all files it finds there. For directories, we (currently) match files
+ending in C<.pm>, C<.pl> and C<.t>. This limitation can be avoided by passing
+in the list of files directly ... or submitting a patch.
