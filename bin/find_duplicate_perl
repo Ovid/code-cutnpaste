@@ -10,6 +10,7 @@ GetOptions(
     'exact'         => \my $exact,
     'ignore=s@'     => \my @ignore,
     'show_warnings' => \my $show_warnings,
+    'jobs=i'        => \( my $jobs = 1 ),
 ) or die "Bad options";
 
 my ( @dirs, @files );
@@ -17,7 +18,7 @@ foreach my $arg (@ARGV) {
     if ( -d $arg ) {
         push @dirs => $arg;
     }
-    elsif (-f $arg) {
+    elsif ( -f $arg ) {
         push @files => $arg;
     }
     else {
@@ -42,7 +43,8 @@ my $cutnpaste = Code::CutNPaste->new(
     ignore        => \@ignore,
     window        => $window,
     verbose       => 1,
-    show_warnings => 1,
+    show_warnings => $show_warnings,
+    jobs          => $jobs,
     %renamed,
 );
 my $duplicates = $cutnpaste->duplicates;
@@ -57,7 +59,7 @@ Left:  %s line %d
 Right: %s line %d
 
 END
-    my $report = "    ".$duplicate->report;
+    my $report = "    " . $duplicate->report;
     $report =~ s/\n/\n    /g;
     print "$report\n";
 }
@@ -78,6 +80,7 @@ find_duplicate_perl
  --exact             If used, will ignore renamed variables and subs
  --ignore            A regex of duplicate code snippets to ignore (may be repeated)
  --show_warnings     If for some reason a file cannot load, use this to show the reason why
+ --jobs              Number of jobs to run (default 1)
 
 =head1 DESCRIPTION
 

@@ -3,7 +3,6 @@ package Code::CutNPaste;
 use 5.006;
 
 use autodie;
-use utf8::all;
 use Capture::Tiny qw(capture);
 use Carp;
 use File::Find::Rule;
@@ -12,14 +11,17 @@ use File::Slurp;
 use File::Spec::Functions qw(catfile catdir);
 use Getopt::Long;
 use Moo;
+use Parallel::ForkManager;
 use Term::ProgressBar;
 use aliased 'Code::CutNPaste::Duplicate';
 use aliased 'Code::CutNPaste::Duplicate::Item';
+use utf8::all;
 
 has 'renamed_vars'  => ( is => 'ro' );
 has 'renamed_subs'  => ( is => 'ro' );
 has 'verbose'       => ( is => 'ro' );
 has 'window'        => ( is => 'rwp', default => sub {5} );
+has 'jobs'          => ( is => 'ro', default => sub {1} );
 has 'show_warnings' => ( is => 'ro' );
 has 'threshhold' => (
     is      => 'ro',
@@ -167,26 +169,78 @@ sub BUILD {
     }
 }
 
+{
+
+    package Parallel::ForkManager::Null;
+    sub new { bless {} => shift }
+    sub start  { }
+    sub run_on_finish {
+        my ( $self, $coderef ) = @_;
+        $self->{finish} = $coderef;
+    }
+    sub finish {
+        my $self = shift;
+        $self->{finish}->(@_);
+    }
+    sub wait_all_children {}
+}
+
 sub find_dups {
     my $self = shift;
     $self->_find_dups_called(1);
     my $files     = $self->files;
     my $num_files = @$files;
 
+    my @pairs;
     for my $i ( 0 .. $#$files - 1 ) {
         my $next = $i + 1;
-        print STDERR "\nProcessing $next out of $num_files files\n"
-          if $self->verbose;
-        my $progress;
-        $progress  = Term::ProgressBar->new( { count => @$files - $next } )
-            if $self->verbose;
-        my $count = 1;
         for my $j ( $next .. $#$files ) {
-            $progress->update( $count++ ) if $self->verbose;
-            my ( $first, $second ) = @{$files}[ $i, $j ];
-            $self->search_for_dups( $first, $second );
+            push @pairs => [ @{$files}[ $i, $j ] ];
         }
     }
+
+    my $jobs = $self->jobs;
+
+    my $fork = $jobs > 1
+        ? Parallel::ForkManager->new($jobs)
+        : Parallel::ForkManager::Null->new;
+
+    $fork->run_on_finish( sub {
+        my $duplicates = pop @_;
+        push @{ $self->_duplicates } => @$duplicates;
+    });
+    my @left_right;
+    if ( $jobs > 1 ) {
+        my $files_per_job = int($num_files/$jobs);
+        for ( 1 .. $jobs ) {
+            if ( $_ < $jobs ) {
+                push @left_right => splice @pairs, 0, $files_per_job;
+            }
+            else {
+                push @left_right => @pairs;
+            }
+        }
+    }
+    else {
+        @left_right = @pairs;
+    }
+
+    my $progress;
+    $progress = Term::ProgressBar->new(
+        {   count => scalar @left_right,
+            ETA   => 'linear',
+        }
+    ) if $self->verbose;
+    my $count = 1;
+    foreach my $next_files (@left_right) {
+        $progress->update($count++) if $self->verbose;
+        my $pid = $fork->start and next;
+
+        my $duplicates_found = $self->search_for_dups( @$next_files );
+
+        $fork->finish( 0, $duplicates_found );
+    }
+    $fork->wait_all_children;
 }
 
 sub duplicates {
@@ -199,8 +253,8 @@ sub search_for_dups {
     my ( $self, $first, $second ) = @_;
     my $window = $self->window;
 
-    my $code1 = $self->get_text($first)  or return;
-    my $code2 = $self->get_text($second) or return;
+    my $code1 = $self->get_text($first)  or return [];
+    my $code2 = $self->get_text($second) or return [];
 
     my %in_second = map { $_->{key} => 1 } @$code2;
 
@@ -215,10 +269,12 @@ sub search_for_dups {
         }
     }
     if ( $matches_found < $window ) {
-        return;
+        return [];
     }
 
     # brute force is bad!
+
+    my @duplicates_found;
     LINE: foreach ( my $i = 0; $i < @$code1 - $window; $i++ ) {
         next LINE unless $in_second{ $code1->[$i]{key} };
 
@@ -277,7 +333,7 @@ sub search_for_dups {
                 if ( $ignore and $report =~ /$ignore/ ) {
                     next LINE;
                 }
-                push @{ $self->_duplicates } => Duplicate->new(
+                push @duplicates_found => Duplicate->new(
                     left => Item->new(
                         file => $first,
                         line => $line1,
@@ -293,6 +349,7 @@ sub search_for_dups {
             }
         }
     }
+    return \@duplicates_found;
 }
 
 sub get_text {
@@ -473,6 +530,12 @@ Minumum number of lines to compare between files. Default is 5.
 
 This code can be very slow. Will print extra information to STDERR if
 verbose is true. This lets you know it hasn't hung.
+
+=head2 C<jobs>
+
+Takes an integer. Defaults to 1. This is the number of jobs we'll try to run
+to gather this data. On multi-core machines, you can easily use this to max
+our your CPU and speed up duplicate code detection.
 
 =head2 C<threshhold>
 
