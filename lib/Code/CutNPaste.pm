@@ -169,22 +169,6 @@ sub BUILD {
     }
 }
 
-{
-
-    package Parallel::ForkManager::Null;
-    sub new { bless {} => shift }
-    sub start  { }
-    sub run_on_finish {
-        my ( $self, $coderef ) = @_;
-        $self->{finish} = $coderef;
-    }
-    sub finish {
-        my $self = shift;
-        $self->{finish}->(@_);
-    }
-    sub wait_all_children {}
-}
-
 sub find_dups {
     my $self = shift;
     $self->_find_dups_called(1);
@@ -201,9 +185,7 @@ sub find_dups {
 
     my $jobs = $self->jobs;
 
-    my $fork = $jobs > 1
-        ? Parallel::ForkManager->new($jobs)
-        : Parallel::ForkManager::Null->new;
+    my $fork = Parallel::ForkManager->new( $jobs || 1 );
 
     $fork->run_on_finish( sub {
         my $duplicates = pop @_;
