@@ -202,7 +202,7 @@ sub find_dups {
         $progress->update( $count++ ) if $self->verbose;
         my $pid = $fork->start and next;
 
-        my $duplicates_found = $self->search_for_dups(@$pair);
+        my $duplicates_found = $self->_search_for_dups(@$pair);
 
         $fork->finish( 0, $duplicates_found );
     }
@@ -220,12 +220,12 @@ sub duplicates {
     return $self->_duplicates;
 }
 
-sub search_for_dups {
+sub _search_for_dups {
     my ( $self, $first, $second ) = @_;
     my $window = $self->window;
 
-    my $code1 = $self->get_text($first)  or return [];
-    my $code2 = $self->get_text($second) or return [];
+    my $code1 = $self->_get_text($first)  or return [];
+    my $code2 = $self->_get_text($second) or return [];
 
     my %in_second = map { $_->{key} => 1 } @$code2;
 
@@ -331,7 +331,7 @@ sub _match_below_threshold {
     return $self->threshold > $total / $matches;
 }
 
-sub get_text {
+sub _get_text {
     my ( $self, $file ) = @_;
 
     my $filename = $file;
@@ -377,15 +377,15 @@ sub get_text {
         }
         write_file( $filename_munged, @munged );
     }
-    return $self->add_line_numbers( $file, \@contents, \@munged );
+    return $self->_add_line_numbers( $file, \@contents, \@munged );
 }
 
-sub add_line_numbers {
+sub _add_line_numbers {
     my $self = shift;
     my $file = shift;
     return if $self->_could_not_deparse->{$file};
-    my $contents = $self->prefilter(shift);
-    my $munged   = $self->prefilter(shift);
+    my $contents = $self->_prefilter(shift);
+    my $munged   = $self->_prefilter(shift);
 
     if ( @$contents != @$munged ) {
         warn <<"END";
@@ -411,32 +411,15 @@ END
         }
         push @contents => {
             line => $line_num,
-            key  => $self->make_key($munged_line),
+            key  => $self->_make_key($munged_line),
             code => $line,
         };
         $line_num++;
     }
-    return $self->postfilter( \@contents );
+    return $self->_postfilter( \@contents );
 }
 
-sub postfilter {
-    my ( $self, $contents ) = @_;
-
-    my @contents;
-    INDEX: for ( my $i = 0; $i < @$contents; $i++ ) {
-        if ( $contents->[$i]{code} =~ /^(\s*)BEGIN\s*\{/ ) {    #    BmEGIN {
-            my $padding = $1;
-            if ( $contents->[ $i + 1 ]{code} =~ /^$padding}/ ) {
-                $i++;
-                next INDEX;
-            }
-        }
-        push @contents => $contents->[$i];
-    }
-    return \@contents;
-}
-
-sub prefilter {
+sub _prefilter {
     my ( $self, $contents ) = @_;
     my @contents;
     my %skip = (
@@ -476,7 +459,24 @@ sub prefilter {
     return \@contents;
 }
 
-sub make_key {
+sub _postfilter {
+    my ( $self, $contents ) = @_;
+
+    my @contents;
+    INDEX: for ( my $i = 0; $i < @$contents; $i++ ) {
+        if ( $contents->[$i]{code} =~ /^(\s*)BEGIN\s*\{/ ) {    #    BmEGIN {
+            my $padding = $1;
+            if ( $contents->[ $i + 1 ]{code} =~ /^$padding}/ ) {
+                $i++;
+                next INDEX;
+            }
+        }
+        push @contents => $contents->[$i];
+    }
+    return \@contents;
+}
+
+sub _make_key {
     my $self = shift;
     local $_ = shift;
     chomp;
