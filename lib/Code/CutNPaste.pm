@@ -175,55 +175,30 @@ sub BUILD {
 sub find_dups {
     my $self = shift;
     $self->_find_dups_called(1);
-    my $files     = $self->files;
-    my $num_files = @$files;
-
-    my @pairs;
-    for my $i ( 0 .. $#$files - 1 ) {
-        my $next = $i + 1;
-        for my $j ( $next .. $#$files ) {
-            push @pairs => [ @{$files}[ $i, $j ] ];
-        }
-    }
-
     my $jobs = $self->jobs;
 
     my $fork = Parallel::ForkManager->new( $jobs || 1 );
-
     $fork->run_on_finish(
         sub {
             my $duplicates = pop @_;
             push @{ $self->_duplicates } => @$duplicates;
         }
     );
-    my @left_right;
-    if ( $jobs > 1 ) {
-        my $files_per_job = int( $num_files / $jobs );
-        for ( 1 .. $jobs ) {
-            if ( $_ < $jobs ) {
-                push @left_right => splice @pairs, 0, $files_per_job;
-            }
-            else {
-                push @left_right => @pairs;
-            }
-        }
-    }
-    else {
-        @left_right = @pairs;
-    }
 
+    my @pairs = $self->_get_pairs_of_files;
     my $progress;
     $progress = Term::ProgressBar->new(
-        {   count => scalar @left_right,
+        {   count => scalar @pairs,
             ETA   => 'linear',
         }
     ) if $self->verbose;
+
     my $count = 1;
-    foreach my $next_files (@left_right) {
+    foreach my $pair (@pairs) {
         $progress->update( $count++ ) if $self->verbose;
         my $pid = $fork->start and next;
 
-        my $duplicates_found = $self->search_for_dups(@$next_files);
+        my $duplicates_found = $self->search_for_dups(@$pair);
 
         $fork->finish( 0, $duplicates_found );
     }
@@ -497,6 +472,38 @@ sub make_key {
     chomp;
     s/\s//g;
     return $_;
+}
+
+sub _get_pairs_of_files {
+    my $self      = shift;
+    my $files     = $self->files;
+    my $num_files = @$files;
+    my $jobs      = $self->jobs;
+
+    my @pairs;
+    for my $i ( 0 .. $#$files - 1 ) {
+        my $next = $i + 1;
+        for my $j ( $next .. $#$files ) {
+            push @pairs => [ @{$files}[ $i, $j ] ];
+        }
+    }
+
+    my @left_right;
+    if ( $jobs > 1 ) {
+        my $files_per_job = int( $num_files / $jobs );
+        for ( 1 .. $jobs ) {
+            if ( $_ < $jobs ) {
+                push @left_right => splice @pairs, 0, $files_per_job;
+            }
+            else {
+                push @left_right => @pairs;
+            }
+        }
+    }
+    else {
+        @left_right = @pairs;
+    }
+    return @left_right;
 }
 
 1;
