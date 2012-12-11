@@ -539,8 +539,9 @@ Minumum number of lines to compare between files. Default is 5.
 
 =head2 C<verbose>
 
-This code can be very slow. Will print extra information to STDERR if
-verbose is true. This lets you know it hasn't hung.
+This code can be very slow. If verbose is true,  will print a progress bar to
+STDERR. The progress bar has an ETA, but this number seems to be fairly
+unreliable. Maybe I'll remove it.
 
 =head2 C<jobs>
 
@@ -570,9 +571,18 @@ and thus will not be reported.
 
 =item * Add Levenstein edit distance
 
-=item * Mask off strings.
+=item * Mask off strings
 
 It's amazing how many strings I'm finding which hide duplicates.
+
+=item * Check files against themselves
+
+Currently, we only check for duplicates in other files. Whoops!
+
+=item * We need a way to skip modules
+
+This is very important for code bases with auto-generated modules. They don't
+care as much about duplicated code.
 
 =back
 
