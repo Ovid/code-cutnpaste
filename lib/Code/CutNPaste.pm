@@ -153,7 +153,7 @@ sub BUILD {
     my $self = shift;
 
     my $cache_dir = $self->cache_dir;
-    $self->_set_window(5) unless defined $self->window;
+    $self->_set_window(5)      unless defined $self->window;
     $self->_set_threshold(.75) unless defined $self->threshold;
 
     if ( -d $cache_dir ) {
@@ -164,8 +164,8 @@ sub BUILD {
         mkdir $cache_dir;
     }
     for my $dir ( @{ $self->dirs } ) {
-        my @files =
-          grep { !/^\./ }
+        my @files
+          = grep { !/^\./ }
           File::Find::Rule->file->name( '*.pm', '*.t', '*.pl' )->in($dir);
 
         # XXX dups and subdirs?
@@ -209,8 +209,8 @@ sub find_dups {
     $fork->wait_all_children;
     if ( $self->verbose ) {
         printf "Ended:   %s\n", scalar localtime;
-        my $time = timediff(Benchmark->new, $start);
-        print STDERR "Time:   ",timestr($time),"\n";
+        my $time = timediff( Benchmark->new, $start );
+        print STDERR "Time:   ", timestr($time), "\n";
     }
 }
 
@@ -246,7 +246,7 @@ sub search_for_dups {
     # brute force is bad!
 
     my @duplicates_found;
-  LINE: foreach ( my $i = 0; $i < @$code1 - $window; $i++ ) {
+    LINE: foreach ( my $i = 0; $i < @$code1 - $window; $i++ ) {
         next LINE unless $in_second{ $code1->[$i]{key} };
 
         my @code1 = @{$code1}[ $i .. $#$code1 ];
@@ -254,7 +254,7 @@ sub search_for_dups {
             my @code2   = @{$code2}[ $j .. $#$code2 ];
             my $matches = 0;
             my $longest = 0;
-          WINDOW: foreach my $k ( 0 .. $#code1 ) {
+            WINDOW: foreach my $k ( 0 .. $#code1 ) {
                 if ( $code1[$k]{key} eq $code2[$k]{key} ) {
                     $matches++;
                     my $length1 = length( $code1[$k]{code} );
@@ -285,8 +285,9 @@ sub search_for_dups {
                 for ( 0 .. $matches - 1 ) {
                     $left  .= $code1[$_]{code} . "\n";
                     $right .= $code2[$_]{code} . "\n";
-                    my ( $line1, $line2 ) =
-                      map { chomp; $_ } ( $code1[$_]{code}, $code2[$_]{code} );
+                    my ( $line1, $line2 )
+                      = map { chomp; $_ }
+                      ( $code1[$_]{code}, $code2[$_]{code} );
                     $report
                       .= $line1 . ( ' ' x ( $longest - length($line1) ) );
                     $report .= " | $line2\n";
@@ -355,8 +356,8 @@ sub get_text {
     }
     else {
         my $stderr;
-        ( undef, $stderr, @contents ) =
-          capture {qx($^X -Ilib -MO=CutNPaste $file)};
+        ( undef, $stderr, @contents )
+          = capture {qx($^X -Ilib -MO=CutNPaste $file)};
         undef $stderr if $stderr =~ /syntax OK/;
         if ( $stderr and !$self->_could_not_deparse->{$file} ) {
             warn "Problem when parsing $file: $stderr"
@@ -367,8 +368,8 @@ sub get_text {
 
         local $ENV{RENAME_VARS} = $self->renamed_vars || 0;
         local $ENV{RENAME_SUBS} = $self->renamed_subs || 0;
-        ( undef, $stderr, @munged ) =
-          capture {qx($^X -Ilib -MO=CutNPaste $file)};
+        ( undef, $stderr, @munged )
+          = capture {qx($^X -Ilib -MO=CutNPaste $file)};
         undef $stderr if $stderr =~ /syntax OK/;
         if ( $stderr and !$self->_could_not_deparse->{$file} ) {
             warn "\nProblem when parsing $file: $stderr"
@@ -422,7 +423,7 @@ sub postfilter {
     my ( $self, $contents ) = @_;
 
     my @contents;
-  INDEX: for ( my $i = 0; $i < @$contents; $i++ ) {
+    INDEX: for ( my $i = 0; $i < @$contents; $i++ ) {
         if ( $contents->[$i]{code} =~ /^(\s*)BEGIN\s*\{/ ) {    #    BmEGIN {
             my $padding = $1;
             if ( $contents->[ $i + 1 ]{code} =~ /^$padding}/ ) {
@@ -443,11 +444,11 @@ sub prefilter {
     );
     my $skip = 0;
 
-  LINE: for ( my $i = 0; $i < @$contents; $i++ ) {
+    LINE: for ( my $i = 0; $i < @$contents; $i++ ) {
         local $_ = $contents->[$i];
         next if /^\s*(?:use|require)\b/;    # use/require
         next if /^\s*$/;                    # blank lines
-        next if /^#(?!line\s+[0-9]+)/;  # comments which aren't line directives
+        next if /^#(?!line\s+[0-9]+)/; # comments which aren't line directives
 
         # Modules which import things create code like this:
         #
