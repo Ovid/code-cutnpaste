@@ -85,6 +85,24 @@ reporting of chunks of code like this:
 The above code has on 40% of its lines containing word (`qr/\w/`) characters,
 and thus will not be reported.
 
+## `cache_dir`
+
+By default, we cache "deparsed" versions of the code in
+`<$ENV{HOME}/.cutnpaste`>. You can use this attribute to specify a different
+cache directory.
+
+## `show_warnings`
+
+A boolean. If true, will display some internal warnings when trying to deparse
+files. It's used for debugging, but you may find it useful. Largely gets
+triggered when you try to search for duplicates in a file that you already
+have in memory, or when the file in question cannot otherwise be deparsed.
+
+## `ignore`
+
+Takes an arrayref of regular expressions. Blocks of code matching _any_ of
+the regular expressions will not be reported as duplicates.
+
 # TODO
 
 - Add Levenstein edit distance
