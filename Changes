@@ -1,5 +1,9 @@
 Revision history for Code-CutNPaste
 
+0.03
+        - Fix broken threshold again!
+        - Fix misspelling of threshold
+
 0.02    December 10, 2012
         - Add 'jobs' switch to allow parallel jobs to run
         - Fix bug where we sometimes try to read the munged file before it's

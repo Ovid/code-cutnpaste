@@ -10,7 +10,8 @@ ok my $cutnpaste = Code::CutNPaste->new(
     renamed_subs => 1,
 );
 $cutnpaste->find_dups;
-ok my $duplicates = $cutnpaste->duplicates;
+my $duplicates = $cutnpaste->duplicates;
+ok @$duplicates, 'We should be able to find duplicates';
 
 foreach my $duplicate (@$duplicates) {
     my ( $left, $right )  = ($duplicate->left, $duplicate->right);

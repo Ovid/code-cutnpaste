@@ -24,10 +24,10 @@ has 'window'        => ( is => 'rwp', default => sub {5} );
 has 'jobs'          => ( is => 'ro', default => sub {1} );
 has 'show_warnings' => ( is => 'ro' );
 has 'threshold' => (
-    is      => 'ro',
+    is      => 'rwp',
     default => sub {.75},
-    coerce  => sub { return .75 unless defined $_[0] },
     isa     => sub {
+        no warnings 'uninitialized';
         my $threshold = 0 + shift;
         if ( $threshold < 0 or $threshold > 1 ) {
             croak("threshold must be between 0 and 1, inclusive");
@@ -117,11 +117,11 @@ Code::CutNPaste - Find Duplicate Perl Code
 
 =head1 VERSION
 
-Version 0.02
+Version 0.03
 
 =cut
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 =head1 SYNOPSIS
 
@@ -153,6 +153,7 @@ sub BUILD {
 
     my $cache_dir = $self->cache_dir;
     $self->_set_window(5) unless defined $self->window;
+    $self->_set_threshold(.75) unless defined $self->threshold;
 
     if ( -d $cache_dir ) {
         my @cached = File::Find::Rule->file->in($cache_dir);
@@ -289,15 +290,8 @@ sub search_for_dups {
             # if too many lines don't meet our threshold level, don't report
             # this block of code
             if ( $matches >= $window ) {
-                if ( my $threshold = $self->threshold ) {
-                    my $total = 0;
-                    for ( 0 .. $matches - 1 ) {
-                        $total++ if $code1[$_]{code} =~ /\w/;
-                    }
-                    if ( $threshold > $total / $matches ) {
-                        $matches = 0;
-                    }
-                }
+                $matches = 0
+                  if $self->_match_below_threshold( $matches, \@code1 );
             }
             if ( $matches >= $window ) {
                 my $line1 = $code1[0]{line};
@@ -338,6 +332,18 @@ sub search_for_dups {
         }
     }
     return \@duplicates_found;
+}
+
+sub _match_below_threshold {
+    my ( $self, $matches, $code ) = @_;
+
+    return unless $self->threshold;
+
+    my $total = 0;
+    for ( 0 .. $matches - 1 ) {
+        $total++ if $code->[$_]{code} =~ /\w/;
+    }
+    return $self->threshold > $total / $matches;
 }
 
 sub get_text {
