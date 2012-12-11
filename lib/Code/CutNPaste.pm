@@ -414,7 +414,7 @@ sub postfilter {
 
     my @contents;
   INDEX: for ( my $i = 0; $i < @$contents; $i++ ) {
-        if ( $contents->[$i]{code} =~ /^(\s*)BEGIN\s*{/ ) {    #    BEGIN {
+        if ( $contents->[$i]{code} =~ /^(\s*)BEGIN\s*\{/ ) {    #    BmEGIN {
             my $padding = $1;
             if ( $contents->[ $i + 1 ]{code} =~ /^$padding}/ ) {
                 $i++;
@@ -451,7 +451,7 @@ sub prefilter {
         #
         # $skip{sub_begin} filters this out
 
-        if (/^sub BEGIN {/) {
+        if (/^sub BEGIN \{/) {
             $skip{sub_begin} = 1;
             $skip++;
         }
