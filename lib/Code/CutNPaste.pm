@@ -23,14 +23,14 @@ has 'verbose'       => ( is => 'ro' );
 has 'window'        => ( is => 'rwp', default => sub {5} );
 has 'jobs'          => ( is => 'ro', default => sub {1} );
 has 'show_warnings' => ( is => 'ro' );
-has 'threshhold' => (
+has 'threshold' => (
     is      => 'ro',
     default => sub {.75},
     coerce  => sub { return .75 unless defined $_[0] },
     isa     => sub {
-        my $threshhold = 0 + shift;
-        if ( $threshhold < 0 or $threshhold > 1 ) {
-            croak("threshhold must be between 0 and 1, inclusive");
+        my $threshold = 0 + shift;
+        if ( $threshold < 0 or $threshold > 1 ) {
+            croak("threshold must be between 0 and 1, inclusive");
         }
     },
 );
@@ -289,12 +289,12 @@ sub search_for_dups {
             # if too many lines don't meet our threshold level, don't report
             # this block of code
             if ( $matches >= $window ) {
-                if ( my $threshhold = $self->threshhold ) {
+                if ( my $threshold = $self->threshold ) {
                     my $total = 0;
                     for ( 0 .. $matches - 1 ) {
                         $total++ if $code1[$_]{code} =~ /\w/;
                     }
-                    if ( $threshhold > $total / $matches ) {
+                    if ( $threshold > $total / $matches ) {
                         $matches = 0;
                     }
                 }
@@ -535,11 +535,11 @@ Takes an integer. Defaults to 1. This is the number of jobs we'll try to run
 to gather this data. On multi-core machines, you can easily use this to max
 our your CPU and speed up duplicate code detection.
 
-=head2 C<threshhold>
+=head2 C<threshold>
 
 A number between 0 and 1. It represents a percentage. If a duplicate section
 of code is found, the percentage number of lines of code containing "word"
-characters must exceed the threshhold. This is done to prevent spurious
+characters must exceed the threshold. This is done to prevent spurious
 reporting of chunks of code like this:
 
          };          |         };
