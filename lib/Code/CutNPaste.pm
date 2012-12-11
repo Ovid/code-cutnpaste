@@ -3,6 +3,7 @@ package Code::CutNPaste;
 use 5.006;
 
 use autodie;
+use Benchmark qw(timediff timestr);
 use Capture::Tiny qw(capture);
 use Carp;
 use File::Find::Rule;
@@ -174,6 +175,9 @@ sub BUILD {
 
 sub find_dups {
     my $self = shift;
+
+    printf "Started: %s\n", scalar localtime if $self->verbose;
+    my $start = Benchmark->new;
     $self->_find_dups_called(1);
     my $jobs = $self->jobs;
 
@@ -203,6 +207,11 @@ sub find_dups {
         $fork->finish( 0, $duplicates_found );
     }
     $fork->wait_all_children;
+    if ( $self->verbose ) {
+        printf "Ended:   %s\n", scalar localtime;
+        my $time = timediff(Benchmark->new, $start);
+        print STDERR "Time:   ",timestr($time),"\n";
+    }
 }
 
 sub duplicates {

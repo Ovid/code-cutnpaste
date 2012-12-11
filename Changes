@@ -1,6 +1,7 @@
 Revision history for Code-CutNPaste
 
 0.03
+        - Show time information when in verbose mode.
         - Fix broken threshold again!
         - Fix misspelling of threshold
 
