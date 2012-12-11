@@ -4,7 +4,7 @@ Code::CutNPaste - Find Duplicate Perl Code
 
 # VERSION
 
-Version 0.02
+Version 0.03
 
 # SYNOPSIS
 
@@ -59,8 +59,9 @@ Minumum number of lines to compare between files. Default is 5.
 
 ## `verbose`
 
-This code can be very slow. Will print extra information to STDERR if
-verbose is true. This lets you know it hasn't hung.
+This code can be very slow. If verbose is true,  will print a progress bar to
+STDERR. The progress bar has an ETA, but this number seems to be fairly
+unreliable. Maybe I'll remove it.
 
 ## `jobs`
 
@@ -68,11 +69,11 @@ Takes an integer. Defaults to 1. This is the number of jobs we'll try to run
 to gather this data. On multi-core machines, you can easily use this to max
 our your CPU and speed up duplicate code detection.
 
-## `threshhold`
+## `threshold`
 
 A number between 0 and 1. It represents a percentage. If a duplicate section
 of code is found, the percentage number of lines of code containing "word"
-characters must exceed the threshhold. This is done to prevent spurious
+characters must exceed the threshold. This is done to prevent spurious
 reporting of chunks of code like this:
 
             };          |         };
@@ -87,9 +88,18 @@ and thus will not be reported.
 # TODO
 
 - Add Levenstein edit distance
-- Mask off strings.
+- Mask off strings
 
 It's amazing how many strings I'm finding which hide duplicates.
+
+- Check files against themselves
+
+Currently, we only check for duplicates in other files. Whoops!
+
+- We need a way to skip modules
+
+This is very important for code bases with auto-generated modules. They don't
+care as much about duplicated code.
 
 # AUTHOR
 
