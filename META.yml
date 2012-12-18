@@ -5,9 +5,9 @@ author:
 build_requires:
   Test::Most: 0.25
 configure_requires:
-  Module::Build: 0.40
+  Module::Build: 0.4
 dynamic_config: 1
-generated_by: 'Module::Build version 0.4003, CPAN::Meta::Converter version 2.120630'
+generated_by: 'Module::Build version 0.4, CPAN::Meta::Converter version 2.120351'
 license: perl
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.4.html
@@ -40,4 +40,5 @@ requires:
   utf8::all: 0.004
 resources:
   license: http://dev.perl.org/licenses/
+  repository: https://github.com/Ovid/code-cutnpaste
 version: 0.03
