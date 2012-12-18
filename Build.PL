@@ -17,12 +17,17 @@ my $builder = Module::Build->new(
         'File::HomeDir'         => 0,
         'File::Slurp'           => '9999.19',
         'Moo'                   => 0,
-        'Parallel::ForkManager' => '0.7.9',
+        'Parallel::ForkManager' => '0.007009',
         'Term::ProgressBar'     => 0,
         'aliased'               => 0,
         'autodie'               => '2.10',
         'perl'                  => 5.006,
         'utf8::all'             => '0.004',
+    },
+    configure_requires => { 'Module::Build' => 0.4 },
+    meta_merge => {
+        resources =>
+          { repository => 'https://github.com/Ovid/code-cutnpaste', },
     },
     add_to_cleanup     => ['Code-CutNPaste-*'],
     create_makefile_pl => 'traditional',
