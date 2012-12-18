@@ -615,6 +615,8 @@ Currently, we only check for duplicates in other files. Whoops!
 This is very important for code bases with auto-generated modules. They don't
 care as much about duplicated code.
 
+=item * A config file?
+
 =back
 
 =head1 AUTHOR
