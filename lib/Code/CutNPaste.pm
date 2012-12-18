@@ -521,6 +521,9 @@ __END__
 
 =head1 DESCRIPTION
 
+C<ALPHA> code, though it works fairly well. You probably want use the
+L<find_duplicate_perl> command line program that ships with this distribution.
+
 A simple, heuristic code duplication checker. Will not work if the code does
 not compile. See the L<find_duplicate_perl> program which is installed with
 it.
@@ -572,8 +575,8 @@ reporting of chunks of code like this:
  }                   | }
  sub _confirm {      | sub _execute {
 
-The above code has on 40% of its lines containing word (C<qr/\w/>) characters,
-and thus will not be reported.
+The above code has only 40% of its lines containing word (C<qr/\w/>)
+characters, and thus will not be reported.
 
 =head2 C<cache_dir>
 
