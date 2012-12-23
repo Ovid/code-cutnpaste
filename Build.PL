@@ -12,6 +12,7 @@ my $builder = Module::Build->new(
         'Test::Most' => '0.25',
     },
     requires => {
+        'B::Keywords'           => 0,
         'Capture::Tiny'         => '0.17',
         'File::Find::Rule'      => '0.33',
         'File::HomeDir'         => 0,

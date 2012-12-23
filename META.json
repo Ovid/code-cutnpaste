@@ -4,7 +4,7 @@
       "Curtis \"Ovid\" Poe <ovid@cpan.org>"
    ],
    "dynamic_config" : 1,
-   "generated_by" : "Module::Build version 0.4003, CPAN::Meta::Converter version 2.120630",
+   "generated_by" : "Module::Build version 0.4003, CPAN::Meta::Converter version 2.120921",
    "license" : [
       "perl_5"
    ],
@@ -26,6 +26,7 @@
       },
       "runtime" : {
          "requires" : {
+            "B::Keywords" : "0",
             "Capture::Tiny" : "0.17",
             "File::Find::Rule" : "0.33",
             "File::HomeDir" : "0",
@@ -47,7 +48,7 @@
       },
       "Code::CutNPaste" : {
          "file" : "lib/Code/CutNPaste.pm",
-         "version" : "0.03"
+         "version" : "0.04"
       },
       "Code::CutNPaste::Duplicate" : {
          "file" : "lib/Code/CutNPaste/Duplicate.pm",
@@ -67,5 +68,5 @@
          "url" : "https://github.com/Ovid/code-cutnpaste"
       }
    },
-   "version" : "0.03"
+   "version" : "0.04"
 }
