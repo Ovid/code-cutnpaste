@@ -5,6 +5,8 @@ has 'file' => ( is => 'ro' );
 has 'line' => ( is => 'ro' );
 has 'code' => ( is => 'ro' );
 
+our $VERSION = 0.30;
+
 1;
 
 __END__
@@ -25,6 +27,10 @@ Code::CutNPaste::Duplicate::Item - Individual code snippet
 
 This is merely a simple object to report on a chunk of code. For internal use
 only.
+
+=head1 VERSION
+
+0.30
 
 =head1 METHODS
 

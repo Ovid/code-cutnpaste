@@ -1,5 +1,11 @@
 Revision history for Code-CutNPaste
 
+0.30
+        - Removed B::Keywords. It wasn't necessary. Thanks to Vladimir
+          Timofeev whose work alerted me to the issue.
+        - Massive bump in version number due to, ironically, some cut-n-pasted
+          code :)
+
 0.04    December 23, 2012
         - Provide C<noutf8> workaround for utf8/fork bug reported by Gabor
           Szabo.
