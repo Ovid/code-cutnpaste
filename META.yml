@@ -7,7 +7,7 @@ build_requires:
 configure_requires:
   Module::Build: 0.4
 dynamic_config: 1
-generated_by: 'Module::Build version 0.4003, CPAN::Meta::Converter version 2.120630'
+generated_by: 'Module::Build version 0.4003, CPAN::Meta::Converter version 2.120921'
 license: perl
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.4.html
@@ -19,7 +19,7 @@ provides:
     version: 0.20
   Code::CutNPaste:
     file: lib/Code/CutNPaste.pm
-    version: 0.03
+    version: 0.04
   Code::CutNPaste::Duplicate:
     file: lib/Code/CutNPaste/Duplicate.pm
     version: 0
@@ -27,6 +27,7 @@ provides:
     file: lib/Code/CutNPaste/Duplicate/Item.pm
     version: 0
 requires:
+  B::Keywords: 0
   Capture::Tiny: 0.17
   File::Find::Rule: 0.33
   File::HomeDir: 0
@@ -41,4 +42,4 @@ requires:
 resources:
   license: http://dev.perl.org/licenses/
   repository: https://github.com/Ovid/code-cutnpaste
-version: 0.03
+version: 0.04
