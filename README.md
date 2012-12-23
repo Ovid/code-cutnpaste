@@ -4,7 +4,7 @@ Code::CutNPaste - Find Duplicate Perl Code
 
 # VERSION
 
-Version 0.03
+Version 0.30
 
 # SYNOPSIS
 
@@ -30,6 +30,9 @@ Version 0.03
     }
 
 # DESCRIPTION
+
+`ALPHA` code, though it works fairly well. You probably want use the
+[find_duplicate_perl](http://search.cpan.org/perldoc?find_duplicate_perl) command line program that ships with this distribution.
 
 A simple, heuristic code duplication checker. Will not work if the code does
 not compile. See the [find_duplicate_perl](http://search.cpan.org/perldoc?find_duplicate_perl) program which is installed with
@@ -82,8 +85,26 @@ reporting of chunks of code like this:
     }                   | }
     sub _confirm {      | sub _execute {
 
-The above code has on 40% of its lines containing word (`qr/\w/`) characters,
-and thus will not be reported.
+The above code has only 40% of its lines containing word (`qr/\w/`)
+characters, and thus will not be reported.
+
+## `noutf8`
+
+Boolean. Default false.
+
+Due to a bug in Perl, the following code crashes Perl in Windows:
+
+    perl -e "use open qw{:encoding(UTF-8) :std}; fork; "
+    perl -e "open $f, '>:encoding(UTF-8)', 'temp.txt'; fork"
+    perl -e "use utf8::all; fork"
+
+By setting `noutf8` to a true value, we avoid loading [utf8::all](http://search.cpan.org/perldoc?utf8::all). This may
+cause undesirable results.
+
+See also:
+
+- [http://www.nntp.perl.org/group/perl.perl5.porters/2012/12/msg196821.html](http://www.nntp.perl.org/group/perl.perl5.porters/2012/12/msg196821.html)
+- [http://perlmonks.org/?node_id=1009989](http://perlmonks.org/?node_id=1009989)
 
 ## `cache_dir`
 
@@ -118,6 +139,8 @@ Currently, we only check for duplicates in other files. Whoops!
 
 This is very important for code bases with auto-generated modules. They don't
 care as much about duplicated code.
+
+- A config file?
 
 # AUTHOR
 
