@@ -16,7 +16,6 @@ use Parallel::ForkManager;
 use Term::ProgressBar;
 use aliased 'Code::CutNPaste::Duplicate';
 use aliased 'Code::CutNPaste::Duplicate::Item';
-use utf8::all;
 
 has 'renamed_vars'  => ( is => 'ro' );
 has 'renamed_subs'  => ( is => 'ro' );
@@ -24,6 +23,7 @@ has 'verbose'       => ( is => 'ro' );
 has 'window'        => ( is => 'rwp', default => sub {5} );
 has 'jobs'          => ( is => 'ro', default => sub {1} );
 has 'show_warnings' => ( is => 'ro' );
+has 'noutf8'        => ( is => 'ro' );
 has 'threshold' => (
     is      => 'rwp',
     default => sub {.75},
@@ -118,11 +118,11 @@ Code::CutNPaste - Find Duplicate Perl Code
 
 =head1 VERSION
 
-Version 0.03
+Version 0.04
 
 =cut
 
-our $VERSION = '0.03';
+our $VERSION = '0.04';
 
 =head1 SYNOPSIS
 
@@ -151,6 +151,11 @@ our $VERSION = '0.03';
 
 sub BUILD {
     my $self = shift;
+
+    unless ( $self->noutf8 ) {
+        eval "use utf8::all";
+        warn $@ if $@;
+    }
 
     my $cache_dir = $self->cache_dir;
     $self->_set_window(5)      unless defined $self->window;
@@ -577,6 +582,29 @@ reporting of chunks of code like this:
 
 The above code has only 40% of its lines containing word (C<qr/\w/>)
 characters, and thus will not be reported.
+
+=head2 C<noutf8>
+
+Boolean. Default false.
+
+Due to a bug in Perl, the following code crashes Perl in Windows:
+
+ perl -e "use open qw{:encoding(UTF-8) :std}; fork; "
+ perl -e "open $f, '>:encoding(UTF-8)', 'temp.txt'; fork"
+ perl -e "use utf8::all; fork"
+
+By setting C<noutf8> to a true value, we avoid loading L<utf8::all>. This may
+cause undesirable results.
+
+See also:
+
+=over 4
+
+=item * L<http://www.nntp.perl.org/group/perl.perl5.porters/2012/12/msg196821.html>
+
+=item * L<http://perlmonks.org/?node_id=1009989>
+
+=back
 
 =head2 C<cache_dir>
 

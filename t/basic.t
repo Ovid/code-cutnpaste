@@ -8,6 +8,7 @@ ok my $cutnpaste = Code::CutNPaste->new(
     dirs         => 't/fixtures',
     renamed_vars => 1,
     renamed_subs => 1,
+    noutf8       => 1,
 );
 $cutnpaste->find_dups;
 my $duplicates = $cutnpaste->duplicates;

@@ -1,6 +1,10 @@
 Revision history for Code-CutNPaste
 
-0.03
+0.04    December 23, 2012
+        - Provide C<noutf8> workaround for utf8/fork bug reported by Gabor
+          Szabo.
+
+0.03    December 19, 2012
         - Show time information when in verbose mode.
         - Fix broken threshold again!
         - Fix misspelling of threshold
