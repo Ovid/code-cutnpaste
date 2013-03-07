@@ -1,8 +1,8 @@
 Revision history for Code-CutNPaste
 
-0.30
+0.30    March 7, 2013 
         - Removed B::Keywords. It wasn't necessary. Thanks to Vladimir
-          Timofeev whose work alerted me to the issue.
+          Timofeev and zdk whose work alerted me to the issue.
         - Massive bump in version number due to, ironically, some cut-n-pasted
           code :)
 
