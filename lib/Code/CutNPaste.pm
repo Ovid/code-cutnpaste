@@ -4,6 +4,7 @@ use 5.006;
 
 use autodie;
 use Benchmark qw(timediff timestr);
+use Try::Tiny;
 use Capture::Tiny qw(capture);
 use Carp;
 use File::Find::Rule;
@@ -361,8 +362,13 @@ sub _get_text {
     }
     else {
         my $stderr;
-        ( undef, $stderr, @contents )
-          = capture {qx($^X -Ilib -MO=CutNPaste $file)};
+        try {
+            ( undef, $stderr, @contents )
+              = capture {qx($^X -Ilib -MO=CutNPaste $file)};
+        } catch {
+            warn "Problem when capturing $^X -Ilib -MO=CutNPaste $file: $_";
+        };
+        return undef if !@contents; #properly return, so we can avoid undef value as an array ref error
         undef $stderr if $stderr =~ /syntax OK/;
         if ( $stderr and !$self->_could_not_deparse->{$file} ) {
             warn "Problem when parsing $file: $stderr"
@@ -373,8 +379,13 @@ sub _get_text {
 
         local $ENV{RENAME_VARS} = $self->renamed_vars || 0;
         local $ENV{RENAME_SUBS} = $self->renamed_subs || 0;
-        ( undef, $stderr, @munged )
-          = capture {qx($^X -Ilib -MO=CutNPaste $file)};
+        try {
+            ( undef, $stderr, @munged )
+              = capture {qx($^X -Ilib -MO=CutNPaste $file)};
+        } catch {
+            warn "Problem when capturing $^X -Ilib -MO=CutNPaste $file: $_";
+        };
+        return undef if !@munged;
         undef $stderr if $stderr =~ /syntax OK/;
         if ( $stderr and !$self->_could_not_deparse->{$file} ) {
             warn "\nProblem when parsing $file: $stderr"
