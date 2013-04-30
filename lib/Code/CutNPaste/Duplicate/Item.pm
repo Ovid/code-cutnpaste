@@ -5,7 +5,7 @@ has 'file' => ( is => 'ro' );
 has 'line' => ( is => 'ro' );
 has 'code' => ( is => 'ro' );
 
-our $VERSION = 0.30;
+our $VERSION = 0.31;
 
 1;
 
@@ -30,7 +30,7 @@ only.
 
 =head1 VERSION
 
-0.30
+0.31
 
 =head1 METHODS
 

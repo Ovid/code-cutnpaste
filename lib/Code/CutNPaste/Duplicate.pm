@@ -4,7 +4,7 @@ use Moo;
 has 'left'   => ( is => 'ro' );
 has 'right'  => ( is => 'ro' );
 has 'report' => ( is => 'ro' );
-our $VERSION = 0.30;
+our $VERSION = 0.31;
 
 1;
 
@@ -37,7 +37,7 @@ internal use only.
 
 =head1 VERSION
 
-0.30
+0.31
 
 =head1 METHODS
 

@@ -6,7 +6,6 @@ WriteMakefile
   'NAME' => 'Code::CutNPaste',
   'VERSION_FROM' => 'lib/Code/CutNPaste.pm',
   'PREREQ_PM' => {
-                   'Try::Tiny' => 0;
                    'Capture::Tiny' => '0.17',
                    'File::Find::Rule' => '0.33',
                    'File::HomeDir' => 0,

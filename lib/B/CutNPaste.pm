@@ -7,7 +7,7 @@ use B::Deparse;
 
 BEGIN {
     @ISA     = 'B::Deparse';
-    $VERSION = '0.30';
+    $VERSION = '0.31';
 
     for my $func (qw( begin_av init_av check_av end_av )) {
 

@@ -1,5 +1,8 @@
 Revision history for Code-CutNPaste
 
+0.31    April 30, 2012
+        - Apply zdk's patch to fetch aref bug. Thanks!
+
 0.30    March 7, 2013 
         - Removed B::Keywords. It wasn't necessary. Thanks to Vladimir
           Timofeev and zdk whose work alerted me to the issue.
