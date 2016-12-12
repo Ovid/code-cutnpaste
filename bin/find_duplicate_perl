@@ -9,6 +9,7 @@ GetOptions(
     'window=i'      => \my $window,
     'exact'         => \my $exact,
     'ignore=s@'     => \my @ignore,
+    'extensions=s@' => \my @extensions,
     'show_warnings' => \my $show_warnings,
     'jobs=i'        => \( my $jobs = 1 ),
     'noutf8'        => \my $noutf8,
@@ -42,6 +43,7 @@ if ($exact) {
 my $cutnpaste = Code::CutNPaste->new(
     dirs          => \@dirs,
     files         => \@files,
+    extensions    => \@extensions,
     ignore        => \@ignore,
     window        => $window,
     verbose       => 1,
@@ -82,8 +84,8 @@ find_duplicate_perl
 
 Takes a list of directories and files as arguments and searches for duplicate
 Perl code in all files it finds there. For directories, we (currently) match
-files ending in C<.pm>, C<.pl> and C<.t>. This limitation can be avoided by
-passing in the list of files directly ... or submitting a patch.
+files ending in C<.pm>, C<.pl>, C<.t> and C<.cgi>, but this can be controlled
+by C<--extensions> option.
 
 Because the program can take a long time to run, we use L<Term::ProgressBar>
 to track the progress. Note that even though it shows an ETA (estimated time
@@ -95,6 +97,7 @@ inaccurate and is there to make you feel better.
  --window=$window     Set minimum number of lines to look for duplicate code (default 5)
  --exact              If used, will ignore renamed variables and subs
  --ignore=$regex      A regex of duplicate code snippets to ignore (may be repeated)
+ --extensions         File extension(s) to be considered (may be repeated, or comma separated)
  --show_warnings      If for some reason a file cannot load, use this to show the reason why
  --jobs=$num_jobs     Number of jobs to run (default 1)
  --threshold=$percent Between 0 and 1. % of lines which must match C<\w> (default .75)
@@ -126,6 +129,15 @@ following will be considered duplicates:
 
 You may pass the C<--exact> flag to say that variable names and subroutine
 names must match exactly.
+
+=item * C<--extensions='*.pm,*.t,*.pl,*.cgi'>
+
+Takes a string argument. Option may be repeated.
+
+Each argument can be a single, or multiple, comma separated list of file
+extensions in the form of C<*.ext>.
+
+Default: C<*.pm,*.t,*.pl,*.cgi>
 
 =item * C<--ignore='Exception->throw\("Undefined url:'>
 

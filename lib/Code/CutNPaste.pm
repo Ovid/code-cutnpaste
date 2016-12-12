@@ -72,6 +72,26 @@ has 'files' => (
     },
 );
 
+has 'extensions' => (
+    is      => 'ro',
+    default => sub { [ '*.pm', '*.t', '*.pl', '*.cgi' ] },
+    coerce  => sub {
+        my $extensions = shift;
+        unless ( ref $extensions ) {
+            $extensions = [$extensions];
+        }
+        return [ split( /\s*,\s*/, join( ',', @{$extensions} ) ) ];
+    },
+    isa => sub {
+        my $extensions = shift;
+        for my $extension ( @$extensions ) {
+            unless ( $extension =~ m{^\*\..+$} ) {
+                croak( "Invalid file extension '$extension'" );
+            }
+        }
+    },
+);
+
 has 'ignore' => (
     is     => 'ro',
     coerce => sub {
@@ -172,7 +192,7 @@ sub BUILD {
     for my $dir ( @{ $self->dirs } ) {
         my @files
           = grep { !/^\./ }
-          File::Find::Rule->file->name( '*.pm', '*.t', '*.pl' )->in($dir);
+          File::Find::Rule->file->name( @{$self->extensions} )->in($dir);
 
         # XXX dups and subdirs?
         push @{ $self->files } => @files;
