@@ -210,8 +210,9 @@ sub find_dups {
     my $fork = Parallel::ForkManager->new( $jobs || 1 );
     $fork->run_on_finish(
         sub {
-            my $duplicates = pop @_;
-            push @{ $self->_duplicates } => @$duplicates;
+            if ( my $duplicates = pop @_ ) {
+                push @{ $self->_duplicates } => @$duplicates;
+            }
         }
     );
 
@@ -501,10 +502,11 @@ sub _postfilter {
     my @contents;
     INDEX: for ( my $i = 0; $i < @$contents; $i++ ) {
         if ( $contents->[$i]{code} =~ /^(\s*)BEGIN\s*\{/ ) {    #    BmEGIN {
-            my $padding = $1;
-            if ( $contents->[ $i + 1 ]{code} =~ /^$padding}/ ) {
-                $i++;
-                next INDEX;
+            if ( my $padding = $1 ) {
+                if ( $contents->[ $i + 1 ]{code} =~ /^$padding}/ ) {
+                    $i++;
+                    next INDEX;
+                }
             }
         }
         push @contents => $contents->[$i];
